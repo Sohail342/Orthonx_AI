@@ -1,0 +1,215 @@
+services:
+  web:
+    image: ${APP_IMAGE}
+    env_file:
+      - .env.prod
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      gunicorn -k uvicorn.workers.UvicornWorker app.main:app
+      --bind 0.0.0.0:8000
+      --workers ${WEB_CONCURRENCY:-4}
+      --timeout ${WEB_TIMEOUT:-120}
+      --max-requests ${GUNICORN_MAX_REQUESTS:-1000}
+      --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-100}
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - traefik.enable=true
+
+      # HTTP router (only needed for http challenge)
+      - traefik.http.routers.web.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.web.entrypoints=web
+
+      # HTTPS router
+      - traefik.http.routers.web-secure.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.web-secure.entrypoints=websecure
+      - traefik.http.routers.web-secure.tls=true
+      - traefik.http.routers.web-secure.tls.certresolver=myresolver
+      - traefik.http.routers.web-secure.middlewares=security-headers,rate-limit
+
+      # Router for www requests
+      - "traefik.http.routers.web-www.rule=Host(`www.${DOMAIN}`)"
+      - "traefik.http.routers.web-www.entrypoints=websecure"
+      - "traefik.http.routers.web-www.tls=true"
+      - "traefik.http.routers.web-www.tls.certresolver=myresolver"
+      - "traefik.http.routers.web-www.middlewares=redirect-to-nonwww"
+
+      # Service port
+      - traefik.http.services.web.loadbalancer.server.port=8000
+
+      # Traefik service healthcheck (so Traefik stops routing to unhealthy instances)
+      - traefik.http.services.web.loadbalancer.healthcheck.path=/health
+      - traefik.http.services.web.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.web.loadbalancer.healthcheck.timeout=3s
+
+      # Rate limiting middleware
+      - traefik.http.middlewares.rate-limit.ratelimit.average=100
+      - traefik.http.middlewares.rate-limit.ratelimit.burst=50
+
+    networks:
+      - backend
+      - traefik
+
+  db:
+    image: postgres:15-alpine
+    env_file:
+      - .env.prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_backups:/backups
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend
+
+  celery:
+    image: ${APP_IMAGE}
+    env_file:
+      - .env.prod
+    command: celery -A app.workers.celery_app worker --loglevel=INFO --max-tasks-per-child=1000
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.workers.celery_app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend
+
+  celery-beat:
+    image: ${APP_IMAGE}
+    env_file:
+      - .env.prod
+    command: celery -A app.workers.celery_app beat --loglevel=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend
+
+  traefik:
+    image: traefik:v3.5
+    command:
+      - "--log.level=DEBUG"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik"
+      - "--entrypoints.websecure.address=:443"
+
+      # Let's Encrypt TLS Challenge
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.caserver=https://acme-v02.api.letsencrypt.org/directory"
+      - "--certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+
+      # Traefik Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # Dashboard routers
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      # Dashboard middleware
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}"
+
+      # Redirect www to non-www
+      - "traefik.http.middlewares.redirect-to-nonwww.redirectregex.regex=^https://www\\.${DOMAIN}/(.*)"
+      - "traefik.http.middlewares.redirect-to-nonwww.redirectregex.replacement=https://${DOMAIN}/$1"
+
+      # Global middlewares (defined on traefik container to ensure availability)
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+    networks:
+      - traefik
+
+volumes:
+  postgres_data:
+    driver: local
+  postgres_backups:
+    driver: local
+  redis_data:
+    driver: local
+  letsencrypt:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
+  traefik:
+    external: true

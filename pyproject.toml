@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fyp_backend"
+version = "0.1.0"
+description = "FYP"
+authors = [
+    {name = "Sohail"},
+]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "fastapi>=0.116",
+    "uvicorn[standard]>=0.35",
+    "pydantic>=2.11",
+    "python-dotenv>=1.1",
+    "fastapi-users[sqlalchemy]>=14.0",
+    "python-multipart>=0.0.20",
+    "pydantic-settings>=2.10",
+    "alembic>=1.15",
+    "asyncpg>=0.30",
+    "psycopg2-binary>=2.9",
+    "celery>=5.3",
+    "redis>=6.4",
+    "fastapi_mail>=1.5.0"
+]
+
+[project.optional-dependencies]
+
+prod = [
+    "gunicorn>=21.2,<22.0",
+]
+
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "httpx>=0.28.1",
+    "ruff>=0.12.11",
+    "mypy>=1.17.1",
+    "pre-commit>=3.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Sohail/fyp_backend"
+Repository = "https://github.com/Sohail/fyp_backend"
+
+[project.scripts]
+fyp_backend = "app.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+# Enable import sorting
+lint.extend-select = ["I"]
+
+# Automatically apply safe fixes (when using `ruff check --fix`)
+fix = true
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+combine-as-imports = true
+force-single-line = false
+
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
