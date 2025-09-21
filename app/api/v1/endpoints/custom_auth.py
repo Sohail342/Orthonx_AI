@@ -1,7 +1,7 @@
 """Test endpoints."""
 
-from fastapi import APIRouter, Depends, Request, HTTPException, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, Request
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.manager import BaseUserManager
 
@@ -26,10 +26,14 @@ async def verify_via_get(
         return templates.TemplateResponse(
             "verify_failed.html", {"request": request, "detail": str(e)}
         )
-        
+
+
 @verify_router.get("/auth/reset-password", response_class=HTMLResponse)
 async def reset_password_form(request: Request, token: str):
-    return templates.TemplateResponse("reset_password.html", {"request": request, "token": token})
+    return templates.TemplateResponse(
+        "reset_password.html", {"request": request, "token": token}
+    )
+
 
 @verify_router.post("/auth/reset-password", response_class=HTMLResponse)
 async def reset_password_submit(
@@ -49,7 +53,9 @@ async def reset_password_submit(
             await user_manager.reset_password(token, password)
             message = "Your password has been reset successfully. You can now log in."
         except Exception:
-            error = "Invalid or expired token. Please request a new password reset link."
+            error = (
+                "Invalid or expired token. Please request a new password reset link."
+            )
 
     return templates.TemplateResponse(
         "reset_password.html",

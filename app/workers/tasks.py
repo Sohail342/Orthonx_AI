@@ -112,8 +112,8 @@ def send_verification_request(email: str, name: str, token: str) -> None:
     )
 
     asyncio.run(fm.send_message(message))
-    
-    
+
+
 @shared_task
 def send_password_reset_email(email: str, name: str, token: str):
     reset_url = (

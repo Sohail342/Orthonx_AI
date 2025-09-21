@@ -11,7 +11,7 @@ from app.database.session import get_db
 from app.models.users import User
 from app.users.dependencies import get_user_db
 from app.utils.users import get_by_phone_no
-from app.workers.tasks import send_verification_request, send_password_reset_email
+from app.workers.tasks import send_password_reset_email, send_verification_request
 
 SECRET = settings.SECRET_KEY
 
