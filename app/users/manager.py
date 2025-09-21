@@ -1,10 +1,9 @@
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import BaseUserManager, UUIDIDMixin
 from fastapi_users.exceptions import UserNotExists
-from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -12,6 +11,7 @@ from app.database.session import get_db
 from app.models.users import User
 from app.users.dependencies import get_user_db
 from app.utils.users import get_by_phone_no
+from app.workers.tasks import send_verification_request, send_password_reset_email
 
 SECRET = settings.SECRET_KEY
 
@@ -19,15 +19,22 @@ SECRET = settings.SECRET_KEY
 class UserManager(UUIDIDMixin, BaseUserManager[User, str]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET
-    
-    async def on_after_request_verify(
-        self, user: User, token: str, request: Optional[Request] = None
-    ):
-        print(f"Verification requested for user {user.id}. Verification token: {token}")
 
     def __init__(self, user_db, db: AsyncSession):
         super().__init__(user_db)
         self.db = db
+
+    async def on_after_request_verify(
+        self, user: User, token: str, request: Optional[Request] = None
+    ):
+        """Send varification mail in background"""
+        send_verification_request.delay(user.email, user.first_name, token)
+
+    async def on_after_forgot_password(
+        self, user: User, token: str, request: Optional[Request] = None
+    ):
+        print(f"User {user.id} has forgot their password. Reset token: {token}")
+        send_password_reset_email.delay(user.email, user.first_name, token)
 
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm

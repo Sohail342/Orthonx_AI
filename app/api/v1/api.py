@@ -2,16 +2,16 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import test
 from app.core.security import auth_backend
 from app.core.users import fastapi_users
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
+
 # FastAPI-Users routers
 api_v1_router.include_router(
-    fastapi_users.get_auth_router(auth_backend),
+    fastapi_users.get_auth_router(auth_backend, requires_verification=True),
     prefix="/auth",
     tags=["auth"],
 )
@@ -26,7 +26,7 @@ api_v1_router.include_router(
     tags=["auth"],
 )
 api_v1_router.include_router(
-    fastapi_users.get_users_router(UserRead, UserUpdate),
+    fastapi_users.get_users_router(UserRead, UserUpdate, requires_verification=True),
     prefix="/users",
     tags=["users"],
 )
@@ -37,4 +37,3 @@ api_v1_router.include_router(
 )
 
 # Custom routers
-api_v1_router.include_router(test.router, tags=["Test"])

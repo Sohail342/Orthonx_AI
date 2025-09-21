@@ -11,7 +11,8 @@ PAKISTAN_MOBILE_REGEX = re.compile(r"^(?:\+92|0)3[0-9]{9}$")
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
-    """ User Read Schema"""
+    """User Read Schema"""
+
     email: str | None = None
     first_name: str | None = None
     phone_number: str | None = None
@@ -26,7 +27,8 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
 
 
 class UserCreate(schemas.BaseUserCreate):
-    """ User Create Schema"""
+    """User Create Schema"""
+
     email: (
         Annotated[
             EmailStr, Field(example="indus@gmail.com", description="Your email Address")
@@ -93,6 +95,7 @@ class UserCreate(schemas.BaseUserCreate):
 
 
 class UserUpdate(schemas.BaseUserUpdate):
-    """ User Update Schema"""
+    """User Update Schema"""
+
     first_name: str | None = None
     phone_number: str | None = None

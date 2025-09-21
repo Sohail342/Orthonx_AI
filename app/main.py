@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_v1_router
+from app.api.v1.endpoints.custom_auth import verify_router
 from app.core.config import settings
 
 
@@ -35,6 +36,7 @@ def create_application() -> FastAPI:
             allow_headers=["*"],
         )
     application.include_router(api_v1_router)
+    application.include_router(verify_router, prefix="/custom", tags=["auth"])
     return application
 
 
