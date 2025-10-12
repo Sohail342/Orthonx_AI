@@ -15,15 +15,9 @@ def create_application() -> FastAPI:
         title=settings.PROJECT_NAME,
         description=settings.PROJECT_DESCRIPTION,
         version="0.1.0",
-        openapi_url=None
-        if settings.ENVIRONMENT == "production"
-        else f"{settings.API_V1_STR}/openapi.json",
-        docs_url=None
-        if settings.ENVIRONMENT == "production"
-        else f"{settings.API_V1_STR}/docs",
-        redoc_url=None
-        if settings.ENVIRONMENT == "production"
-        else f"{settings.API_V1_STR}/redoc",
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        docs_url=f"{settings.API_V1_STR}/docs",
+        redoc_url=f"{settings.API_V1_STR}/redoc",
     )
 
     # Set up CORS

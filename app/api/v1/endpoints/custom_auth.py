@@ -61,7 +61,7 @@ async def reset_password_submit(
         "reset_password.html",
         {
             "request": request,
-            "token": token,  # Keep token in case they retry
+            "token": token,
             "message": message,
             "error": error,
         },

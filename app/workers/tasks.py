@@ -15,9 +15,9 @@ fm = FastMail(conf)
 def send_verification_request(email: str, name: str, token: str) -> None:
     """Send email in a synchronous way (for Celery tasks)."""
     verify_url = (
-        f"https://{settings.DOMAIN}/auth/verify/email?token={token}"
+        f"https://{settings.DOMAIN}/custom/auth/verify/email?token={token}"
         if settings.ENVIRONMENT == "production"
-        else f"http://127.0.0.1:8000/auth/verify/email?token={token}"
+        else f"http://127.0.0.1:8000/custom/auth/verify/email?token={token}"
     )
 
     subject = "Verify your account"
@@ -117,9 +117,9 @@ def send_verification_request(email: str, name: str, token: str) -> None:
 @shared_task
 def send_password_reset_email(email: str, name: str, token: str):
     reset_url = (
-        f"https://{settings.DOMAIN}/auth/reset-password?token={token}"
+        f"https://{settings.DOMAIN}/custom/auth/reset-password?token={token}"
         if settings.ENVIRONMENT == "production"
-        else f"http://127.0.0.1:8000/auth/reset-password?token={token}"
+        else f"http://127.0.0.1:8000/custom/auth/reset-password?token={token}"
     )
 
     subject = "Reset Your Password"
