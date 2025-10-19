@@ -36,6 +36,8 @@ venv.bak/
 *.swp
 *.swo
 
+.mypy_cache/
+
 # OS
 .DS_Store
 Thumbs.db
