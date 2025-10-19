@@ -2,10 +2,11 @@
 
 import re
 import uuid
-from typing import Annotated, Literal
+from typing import Literal, Optional, Type
 
 from fastapi_users import schemas
 from pydantic import EmailStr, Field, field_validator, model_validator
+from typing_extensions import Annotated
 
 PAKISTAN_MOBILE_REGEX = re.compile(r"^(?:\+92|0)3[0-9]{9}$")
 
@@ -13,12 +14,12 @@ PAKISTAN_MOBILE_REGEX = re.compile(r"^(?:\+92|0)3[0-9]{9}$")
 class UserRead(schemas.BaseUser[uuid.UUID]):
     """User Read Schema"""
 
-    email: str | None = None
-    first_name: str | None = None
-    phone_number: str | None = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    phone_number: Optional[str] = None
 
     @field_validator("phone_number")
-    def validate_phone_number(cls, v) -> str:
+    def validate_phone_number(cls: Type["UserRead"], v: Optional[str]) -> Optional[str]:
         if v:
             return "".join([digit for digit in v])
         return None
@@ -29,12 +30,11 @@ class UserRead(schemas.BaseUser[uuid.UUID]):
 class UserCreate(schemas.BaseUserCreate):
     """User Create Schema"""
 
-    email: (
+    email: Optional[
         Annotated[
             EmailStr, Field(example="indus@gmail.com", description="Your email Address")
         ]
-        | None
-    ) = None
+    ] = None
     registration_type: Annotated[
         str,
         Literal["email", "phone"],
@@ -45,8 +45,8 @@ class UserCreate(schemas.BaseUserCreate):
             exclude=True,
         ),
     ]
-    first_name: str | None = None
-    phone_number: (
+    first_name: Optional[str] = None
+    phone_number: Optional[
         Annotated[
             str,
             Field(
@@ -54,11 +54,12 @@ class UserCreate(schemas.BaseUserCreate):
                 description="Pakistani mobile number (e.g. 03001234567, +923001234567)",
             ),
         ]
-        | None
-    ) = None
+    ] = None
 
     @field_validator("phone_number")
-    def validate_phone_number(cls, v: str) -> str:
+    def validate_phone_number(
+        cls: Type["UserCreate"], v: Optional[str]
+    ) -> Optional[str]:
         if v and not PAKISTAN_MOBILE_REGEX.match(v):
             raise ValueError(
                 "Invalid Pakistani mobile number. Use format 030XXXXXXXX or +9230XXXXXXXX"
@@ -66,7 +67,7 @@ class UserCreate(schemas.BaseUserCreate):
         return v
 
     @model_validator(mode="before")
-    def validate_required_fields(cls, data: dict):
+    def validate_required_fields(cls: Type["UserCreate"], data: dict) -> dict:
         reg_type = data.get("registration_type")
 
         if reg_type == "phone":
@@ -86,7 +87,7 @@ class UserCreate(schemas.BaseUserCreate):
         return data
 
     @field_validator("registration_type")
-    def validate_registration_type(cls, v: str) -> str:
+    def validate_registration_type(cls: Type["UserCreate"], v: str) -> str:
         if v not in ("phone", "email"):
             raise ValueError(
                 "Invalid registration_type: must be either 'email' or 'phone'."
@@ -97,5 +98,5 @@ class UserCreate(schemas.BaseUserCreate):
 class UserUpdate(schemas.BaseUserUpdate):
     """User Update Schema"""
 
-    first_name: str | None = None
-    phone_number: str | None = None
+    first_name: Optional[str] = None
+    phone_number: Optional[str] = None

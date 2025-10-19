@@ -22,6 +22,7 @@ def create_application() -> FastAPI:
 
     # Set up CORS
     if settings.BACKEND_CORS_ORIGINS:
+        print("CORS origins:", settings.BACKEND_CORS_ORIGINS)
         application.add_middleware(
             CORSMiddleware,
             allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
@@ -38,7 +39,7 @@ app = create_application()
 
 
 @app.get("/")
-def root():
+def root() -> dict:
     """Root endpoint."""
     return {
         "message": f"Welcome to {settings.PROJECT_NAME}",
@@ -48,5 +49,5 @@ def root():
 
 
 @app.get("/health")
-async def health():
+async def health() -> dict:
     return {"status": "ok"}

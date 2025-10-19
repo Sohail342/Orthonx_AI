@@ -1,16 +1,31 @@
-from fastapi_mail import ConnectionConfig
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import cast
 
 from app.core.config import settings
 
-conf = ConnectionConfig(
-    MAIL_USERNAME=settings.SMTP_USER,
-    MAIL_PASSWORD=settings.SMTP_PASSWORD,
-    MAIL_FROM=settings.EMAILS_FROM,
-    MAIL_PORT=587,
-    MAIL_SERVER=settings.SMTP_HOST,
-    MAIL_FROM_NAME="FYP",
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
-)
+SMTP_HOST = settings.SMTP_HOST
+SMTP_PORT = settings.SMTP_PORT
+SMTP_USER = settings.SMTP_USER
+SMTP_PASSWORD = settings.SMTP_PASSWORD
+FROM_EMAIL = settings.EMAILS_FROM
+
+
+def send_smtp_email(to_email: str, subject: str, html_body: str) -> dict:
+    """Send an HTML email via SMTP (production-safe)."""
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = FROM_EMAIL
+        msg["To"] = to_email
+
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP_SSL(cast(str, SMTP_HOST), cast(int, SMTP_PORT)) as server:
+            server.login(cast(str, SMTP_USER), cast(str, SMTP_PASSWORD))
+            server.send_message(msg)
+
+        return {"status": "sent", "recipient": to_email}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
