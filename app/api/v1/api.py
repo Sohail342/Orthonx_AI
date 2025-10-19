@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.v1.endpoints import predict_fracture
 from app.core.security import auth_backend
 from app.core.users import fastapi_users
 from app.schemas.user import UserCreate, UserRead, UserUpdate
@@ -37,3 +38,6 @@ api_v1_router.include_router(
 )
 
 # Custom routers
+api_v1_router.include_router(
+    predict_fracture.router, prefix="/fracture", tags=["fracture"]
+)

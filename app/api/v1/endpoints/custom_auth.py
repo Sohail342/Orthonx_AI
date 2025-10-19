@@ -17,7 +17,7 @@ async def verify_via_get(
     request: Request,
     token: str,
     user_manager: BaseUserManager = Depends(get_user_manager),
-):
+) -> HTMLResponse:
     """Custom Verify Endpoint with GET Method"""
     try:
         await user_manager.verify(token, request)
@@ -29,7 +29,7 @@ async def verify_via_get(
 
 
 @verify_router.get("/auth/reset-password", response_class=HTMLResponse)
-async def reset_password_form(request: Request, token: str):
+async def reset_password_form(request: Request, token: str) -> HTMLResponse:
     return templates.TemplateResponse(
         "reset_password.html", {"request": request, "token": token}
     )
@@ -42,7 +42,7 @@ async def reset_password_submit(
     password: str = Form(...),
     password_confirm: str = Form(...),
     user_manager: BaseUserManager = Depends(get_user_manager),
-):
+) -> HTMLResponse:
     message = None
     error = None
 
