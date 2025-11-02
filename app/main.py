@@ -22,10 +22,9 @@ def create_application() -> FastAPI:
 
     # Set up CORS
     if settings.BACKEND_CORS_ORIGINS:
-        print("CORS origins:", settings.BACKEND_CORS_ORIGINS)
         application.add_middleware(
             CORSMiddleware,
-            allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+            allow_origins=["*"],
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
