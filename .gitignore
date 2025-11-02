@@ -67,9 +67,6 @@ htmlcov/
 .env.test.local
 .env.production.local
 
-# Docker
-.dockerignore
-
 # Celery
 celerybeat-schedule
 celerybeat.pid
