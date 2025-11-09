@@ -1,4 +1,4 @@
-"""Test endpoints."""
+"""Custom Authentication Endpoints with HTML Responses"""
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse
