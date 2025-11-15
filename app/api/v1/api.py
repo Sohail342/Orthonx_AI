@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import bodypart_detector, predict_fracture
+from app.api.v1.endpoints import prediction
 from app.core.security import auth_backend
 from app.core.users import fastapi_users
 from app.schemas.user import UserCreate, UserRead, UserUpdate
@@ -39,8 +39,5 @@ api_v1_router.include_router(
 
 # Custom routers
 api_v1_router.include_router(
-    predict_fracture.router, prefix="/fracture", tags=["fracture"]
-)
-api_v1_router.include_router(
-    bodypart_detector.router, prefix="/bodypart", tags=["bodypart"]
+    prediction.router, prefix="/prediction", tags=["prediction"]
 )

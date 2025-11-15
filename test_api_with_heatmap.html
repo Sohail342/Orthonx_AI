@@ -38,8 +38,42 @@
     button:hover { background: #0056b3; }
     .result {
       margin-top: 25px;
-      text-align: center;
+      text-align: left;
       max-width: 700px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .result h2 {
+      text-align: center;
+      color: #333;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 15px 0;
+    }
+    .info-item {
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .info-item strong {
+      color: #555;
+    }
+    .risk-high {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    .risk-medium {
+      color: #ffc107;
+      font-weight: bold;
+    }
+    .risk-low {
+      color: #28a745;
+      font-weight: bold;
     }
     img {
       margin-top: 15px;
@@ -75,7 +109,7 @@
       formData.append('file', fileInput.files[0]);
 
       try {
-        const response = await fetch('https://orthoscan.publicvm.com/api/v1/fracture/predict_with_visualization', {
+        const response = await fetch('http://localhost:8000/api/v1/prediction/analyze_with_gradcam', {
           method: 'POST',
           body: formData
         });
@@ -83,13 +117,42 @@
         if (!response.ok) throw new Error('Prediction request failed');
         const data = await response.json();
 
+        // Determine risk class for styling
+        const riskClass = data.fracture.risk === 'HIGH' ? 'risk-high' :
+                         data.fracture.risk === 'MEDIUM' ? 'risk-medium' : 'risk-low';
+
         resultDiv.innerHTML = `
-          <h2>Prediction Result</h2>
-          <p><b>Prediction:</b> ${data.prediction}</p>
-          <p><b>Probability:</b> ${(data.probability * 100).toFixed(2)}%</p>
-          <p><b>Confidence:</b> ${(data.confidence * 100).toFixed(2)}%</p>
-          <p><b>Detected Regions:</b> ${data.regions_count}</p>
-          <img src="${data.visualization}" alt="Visualization" />
+          <h2>🩻 Fracture Detection Results</h2>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <strong>Body Part:</strong><br>
+              ${data.body_part}
+            </div>
+            <div class="info-item">
+              <strong>Confidence:</strong><br>
+              ${(data.confidence * 100).toFixed(2)}%
+            </div>
+            <div class="info-item">
+              <strong>Fracture Status:</strong><br>
+              ${data.fracture.positive ? '⚠️ Positive' : '✅ Negative'}
+            </div>
+            <div class="info-item">
+              <strong>Fracture Probability:</strong><br>
+              ${(data.fracture.probability * 100).toFixed(2)}%
+            </div>
+            <div class="info-item">
+              <strong>Risk Level:</strong><br>
+              <span class="${riskClass}">${data.fracture.risk}</span>
+            </div>
+            <div class="info-item">
+              <strong>Recommendation:</strong><br>
+              ${data.recommendation}
+            </div>
+          </div>
+
+          <h3 style="text-align: center; margin-top: 20px;">Grad-CAM Heatmap</h3>
+          <img src="${data.heatmap}" alt="Grad-CAM Heatmap" />
         `;
       } catch (error) {
         console.error(error);
