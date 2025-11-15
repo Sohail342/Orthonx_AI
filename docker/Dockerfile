@@ -1,71 +1,67 @@
 # Stage 1: Builder
 FROM python:3.12-slim AS builder
 
-# Set working directory
+# Set timezone to Pakistan (PKT)
+ENV TZ=Asia/Karachi
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 
-# Install system dependencies required for building Python packages
+# Install build + runtime deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    curl \
-    libgl1 \
-    libglib2.0-0 \
+    build-essential gcc g++ curl \
+    libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv (fast Python package installer)
-RUN pip install uv
+# Install uv (fast installer)
+RUN pip install --no-cache-dir uv
 
-# Copy dependency definitions
+# Copy pyproject.toml
 COPY pyproject.toml ./
-# COPY uv.lock ./   # Optional if you generate one
 
-# Allow specifying which extras to install
-ARG INSTALL_EXTRAS=prod
+# Install PyTorch CPU + extras (cached)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    uv pip install --system --no-cache \
+    "torch==2.3.0+cpu" "torchvision==0.18.0+cpu" \
+    -f https://download.pytorch.org/whl/torch_stable.html \
+    ".[prod]"
 
-# Install dependencies directly into the system (for runtime stage)
-RUN uv pip install --system --no-cache ".[${INSTALL_EXTRAS}]"
-
-
-# Stage 2: Runtime
+# Stage 2: Runtime (Lean + Secure)
 FROM python:3.12-slim
 
-# Set working directory
+# Pakistan Timezone
+ENV TZ=Asia/Karachi
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 WORKDIR /app
 
-# Environment variables for cleaner Python logs
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install runtime dependencies
+# Runtime deps only
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd -m appuser
 
-# Copy installed packages from builder
+# Copy installed packages
 COPY --from=builder /usr/local /usr/local
 
-# Copy application source code
+# Copy app
 COPY ./app ./app
 COPY ./alembic.ini ./
 COPY ./alembic ./alembic
-
-# Copy and set permissions for entrypoint script
 COPY docker/docker-entrypoint.sh /usr/local/bin/
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+# Models (pre-downloaded)
+COPY ./app/ml_models ./ml_models
+COPY ./app/pytorch_models ./pytorch_models
 
-RUN useradd -m appuser
-
-
-RUN mkdir -p /app/data /app/logs \
+# Setup
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
     && chown -R appuser:appuser /app
 
-# Switch to the non-root user
 USER appuser
 
-# Set the entrypoint
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-
-# Default command (production)
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "-b", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
