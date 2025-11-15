@@ -38,6 +38,11 @@ venv.bak/
 
 .mypy_cache/
 
+# ml models
+*.pt
+*.onnx
+*.pth
+
 # OS
 .DS_Store
 Thumbs.db
