@@ -26,7 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     -f https://download.pytorch.org/whl/torch_stable.html \
     ".[prod]"
 
-# Stage 2: Runtime (Lean + Secure)
+# Stage 2: Runtime
 FROM python:3.12-slim
 
 # Pakistan Timezone
