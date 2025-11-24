@@ -1,3 +1,4 @@
+import logging
 from typing import AsyncGenerator, Optional, cast
 
 from fastapi import Depends, HTTPException, Request, status
@@ -16,6 +17,7 @@ from app.utils.users import get_by_phone_no
 from app.workers.tasks import send_password_reset_email, send_verification_request
 
 SECRET = settings.SECRET_KEY
+logger = logging.getLogger(__name__)
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, str]):
@@ -31,12 +33,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, str]):
     ) -> None:
         """Send varification mail in background"""
         send_verification_request.delay(user.email, user.first_name, token)
+        logger.info(f"Send Verfication trigger for user {user.id}.")
 
     async def on_after_forgot_password(
         self, user: User, token: str, request: Optional[Request] = None
     ) -> None:
-        print(f"User {user.id} has forgot their password. Reset token: {token}")
         send_password_reset_email.delay(user.email, user.first_name, token)
+        logger.info(f"User {user.id} has forgot their password.")
 
     async def authenticate(
         self, credentials: OAuth2PasswordRequestForm
