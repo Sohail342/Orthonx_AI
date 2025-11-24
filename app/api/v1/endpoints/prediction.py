@@ -1,9 +1,10 @@
-from fastapi import APIRouter, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import JSONResponse
 
+from app.core.users import current_active_verified_user
 from app.services.prediction import analyze_service, analyze_with_gradcam_service
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(current_active_verified_user)])
 
 
 @router.post("/analyze")
