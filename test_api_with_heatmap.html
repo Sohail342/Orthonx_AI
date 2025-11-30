@@ -21,10 +21,6 @@
       text-align: center;
       width: 400px;
     }
-    input[type=file] {
-      margin-top: 10px;
-      padding: 5px;
-    }
     button {
       margin-top: 15px;
       padding: 8px 18px;
@@ -36,19 +32,18 @@
       font-size: 14px;
     }
     button:hover { background: #0056b3; }
+
     .result {
       margin-top: 25px;
       text-align: left;
-      max-width: 700px;
+      max-width: 900px;
       background: white;
       padding: 20px;
       border-radius: 12px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-    .result h2 {
-      text-align: center;
-      color: #333;
-    }
+    .result h2 { text-align: center; color: #333; }
+
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -60,31 +55,34 @@
       background: #f8f9fa;
       border-radius: 6px;
     }
-    .info-item strong {
-      color: #555;
+    .info-item strong { color: #555; }
+
+    .risk-high { color: #dc3545; font-weight: bold; }
+    .risk-medium { color: #ffc107; font-weight: bold; }
+    .risk-low { color: #28a745; font-weight: bold; }
+
+    /* Image Layout */
+    .image-grid {
+      margin-top: 25px;
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
-    .risk-high {
-      color: #dc3545;
-      font-weight: bold;
+    .image-box {
+      text-align: center;
     }
-    .risk-medium {
-      color: #ffc107;
-      font-weight: bold;
-    }
-    .risk-low {
-      color: #28a745;
-      font-weight: bold;
-    }
-    img {
-      margin-top: 15px;
-      max-width: 100%;
+    .image-box img {
+      max-width: 380px;
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
+
   <h1>🩻 Fracture Detection</h1>
+
   <div class="upload-box">
     <p>Select an image to predict:</p>
     <input type="file" id="fileInput" accept="image/*">
@@ -117,42 +115,34 @@
         if (!response.ok) throw new Error('Prediction request failed');
         const data = await response.json();
 
-        // Determine risk class for styling
-        const riskClass = data.fracture.risk === 'HIGH' ? 'risk-high' :
-                         data.fracture.risk === 'MEDIUM' ? 'risk-medium' : 'risk-low';
+        const riskClass =
+          data.fracture.risk === 'HIGH' ? 'risk-high' :
+          data.fracture.risk === 'MEDIUM' ? 'risk-medium' : 'risk-low';
 
         resultDiv.innerHTML = `
           <h2>🩻 Fracture Detection Results</h2>
 
           <div class="info-grid">
-            <div class="info-item">
-              <strong>Body Part:</strong><br>
-              ${data.body_part}
-            </div>
-            <div class="info-item">
-              <strong>Confidence:</strong><br>
-              ${(data.confidence * 100).toFixed(2)}%
-            </div>
-            <div class="info-item">
-              <strong>Fracture Status:</strong><br>
-              ${data.fracture.positive ? '⚠️ Positive' : '✅ Negative'}
-            </div>
-            <div class="info-item">
-              <strong>Fracture Probability:</strong><br>
-              ${(data.fracture.probability * 100).toFixed(2)}%
-            </div>
-            <div class="info-item">
-              <strong>Risk Level:</strong><br>
-              <span class="${riskClass}">${data.fracture.risk}</span>
-            </div>
-            <div class="info-item">
-              <strong>Recommendation:</strong><br>
-              ${data.recommendation}
-            </div>
+            <div class="info-item"><strong>Body Part:</strong><br>${data.body_part}</div>
+            <div class="info-item"><strong>Confidence:</strong><br>${(data.confidence * 100).toFixed(2)}%</div>
+            <div class="info-item"><strong>Fracture Status:</strong><br>${data.fracture.positive ? '⚠️ Positive' : '✅ Negative'}</div>
+            <div class="info-item"><strong>Fracture Probability:</strong><br>${(data.fracture.probability * 100).toFixed(2)}%</div>
+            <div class="info-item"><strong>Risk Level:</strong><br><span class="${riskClass}">${data.fracture.risk}</span></div>
+            <div class="info-item"><strong>Recommendation:</strong><br>${data.recommendation}</div>
           </div>
 
-          <h3 style="text-align: center; margin-top: 20px;">Grad-CAM Heatmap</h3>
-          <img src="${data.heatmap}" alt="Grad-CAM Heatmap" />
+          <div class="image-grid">
+            <div class="image-box">
+              <h3>Original Image</h3>
+              <img src="${data.original_image}" alt="Original Image" />
+            </div>
+
+            ${data.heatmap ? `
+            <div class="image-box">
+              <h3>Grad-CAM Heatmap</h3>
+              <img src="${data.heatmap}" alt="Grad-CAM Heatmap" />
+            </div>` : ''}
+          </div>
         `;
       } catch (error) {
         console.error(error);
@@ -160,5 +150,6 @@
       }
     }
   </script>
+
 </body>
 </html>

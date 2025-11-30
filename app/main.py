@@ -1,11 +1,12 @@
 """Main FastAPI application."""
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.api import api_v1_router
 from app.api.v1.endpoints.custom_auth import verify_router
 from app.core.config import settings
+from app.core.users import current_active_verified_user
 
 
 def create_application() -> FastAPI:
@@ -37,7 +38,7 @@ def create_application() -> FastAPI:
 app = create_application()
 
 
-@app.get("/")
+@app.get("/", dependencies=[Depends(current_active_verified_user)])
 def root() -> dict:
     """Root endpoint."""
     return {
@@ -47,6 +48,6 @@ def root() -> dict:
     }
 
 
-@app.get("/health")
+@app.get("/health", dependencies=[Depends(current_active_verified_user)])
 async def health() -> dict:
     return {"status": "ok"}
