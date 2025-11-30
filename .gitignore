@@ -49,7 +49,6 @@ Thumbs.db
 
 # Ignore large ML models
 app/ml_models/*.keras
-uv.lock
 
 # Database
 *.db

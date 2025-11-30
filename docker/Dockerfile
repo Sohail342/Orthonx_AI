@@ -64,4 +64,5 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
 USER appuser
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
 CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "-b", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
