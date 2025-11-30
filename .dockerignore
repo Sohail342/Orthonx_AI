@@ -44,7 +44,6 @@ Thumbs.db
 
 # Ignore large ML models
 app/ml_models/*.keras
-uv.lock
 
 # Database
 *.db
@@ -76,3 +75,5 @@ celerybeat.pid
 .env.dev
 
 .ruff_cache
+.mypy_cache
+__pypackages__/
