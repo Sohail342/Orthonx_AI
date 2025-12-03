@@ -8,9 +8,10 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /app
 
 # Install build + runtime deps
+# Added libsndfile1 for better audio processing support often needed by ML libraries
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential gcc g++ curl \
-    libgl1 libglib2.0-0 \
+    libgl1 libglib2.0-0 libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (fast installer)
@@ -19,11 +20,14 @@ RUN pip install --no-cache-dir uv
 # Copy pyproject.toml
 COPY pyproject.toml ./
 
-# Install PyTorch CPU + extras (cached)
 RUN --mount=type=cache,target=/root/.cache/pip \
     uv pip install --system --no-cache \
-    "torch==2.3.0+cpu" "torchvision==0.18.0+cpu" \
-    -f https://download.pytorch.org/whl/torch_stable.html \
+    --find-links "https://download.pytorch.org/whl/torch_stable.html" \
+    "torch==2.3.0+cpu" "torchvision==0.18.0+cpu"
+
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    uv pip install --system --no-cache \
     ".[prod]"
 
 # Stage 2: Runtime
@@ -40,7 +44,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Runtime deps only
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglib2.0-0 \
+    libgl1 libglib2.0-0 libsndfile1 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m appuser
 
