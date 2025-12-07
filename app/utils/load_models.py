@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import onnxruntime as ort
@@ -5,13 +6,12 @@ from huggingface_hub import hf_hub_download, snapshot_download
 from optimum.onnxruntime import ORTModelForImageClassification
 from transformers import AutoImageProcessor
 
-from app.core.config import settings
 from app.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
 
-HF_TOKEN = settings.HF_API_KEY
+HF_TOKEN = os.getenv("HF_API_KEY")
 
 try:
     model_path = Path(

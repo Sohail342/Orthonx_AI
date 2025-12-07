@@ -33,6 +33,7 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
+          build-args: |
+            HF_API_KEY=${{ secrets.HF_API_KEY }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_IMAGE}}:${{ steps.version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKERHUB_IMAGE}}:latest

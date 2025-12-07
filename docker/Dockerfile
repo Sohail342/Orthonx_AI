@@ -69,8 +69,13 @@ COPY ./alembic.ini ./
 COPY ./alembic ./alembic
 COPY docker/docker-entrypoint.sh /usr/local/bin/
 
-# Copy ML models
-COPY ./app/ml_models /app/ml_models
+ARG HF_API_KEY
+ENV HF_API_KEY=${HF_API_KEY}
+
+# Download ML models from Hugging Face account
+RUN mkdir -p /app/ml_models/bone_fracture_detection \
+    && mkdir -p /app/ml_models/bone_fracture_model_onnx \
+    && python -c "import app.utils.load_models"
 
 # Setup
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
