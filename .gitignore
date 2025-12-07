@@ -21,6 +21,7 @@ wheels/
 *.egg
 
 .ruff_cache/
+.ruff_cache/
 # Virtual environments
 .env
 .venv
@@ -48,6 +49,9 @@ app/ml_models/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Ignore large ML models
+app/ml_models/*.keras
 
 # Ignore large ML models
 app/ml_models/*.keras
