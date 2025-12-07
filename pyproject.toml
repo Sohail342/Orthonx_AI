@@ -1,6 +1,6 @@
 [project]
 name = "fyp_backend"
-version = "0.1.0"
+version = "v0.1.2"
 description = "FYP"
 authors = [
     {name = "Sohail"},
@@ -26,6 +26,9 @@ dependencies = [
     "matplotlib>=3.10.7",
     "opencv-python>=4.11.0",
     "numpy>=1.24.3",
+    "transformers>=4.55.4",
+    "optimum>=2.0.0",
+    "optimum[onnxruntime]",
 ]
 
 [dependency-groups]

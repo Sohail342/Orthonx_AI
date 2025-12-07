@@ -1,23 +1,18 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse
 
-from app.core.users import current_active_verified_user
-from app.services.prediction import cnn_service
+from app.services.prediction import bone_fracture_predictor
 
-router = APIRouter(dependencies=[Depends(current_active_verified_user)])
-
-
-@router.post("/analyze")
-async def analyze(file: UploadFile = File(...)) -> JSONResponse:
-    try:
-        return await cnn_service.analyze_service(file)
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+router = APIRouter()
 
 
-@router.post("/analyze_with_gradcam")
-async def analyze_with_gradcam(file: UploadFile = File(...)) -> JSONResponse:
-    try:
-        return await cnn_service.analyze_with_gradcam_service(file)
-    except Exception as e:
-        return JSONResponse({"error": str(e)}, status_code=500)
+@router.post("/detect")
+async def detect(image_file: UploadFile = File(...)) -> JSONResponse:
+    result = await bone_fracture_predictor.run_inference_detection(image_file)
+    return JSONResponse(result)
+
+
+@router.post("/predict")
+async def predict_fracture(image_file: UploadFile = File(...)) -> JSONResponse:
+    result = await bone_fracture_predictor.run_inference_fracture(image_file)
+    return JSONResponse(result)

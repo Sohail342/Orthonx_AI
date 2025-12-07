@@ -1,6 +1,10 @@
 # Stage 1: Builder
 FROM python:3.12-slim AS builder
 
+# Set environment variables for Hugging Face cache
+ENV TRANSFORMERS_CACHE=/tmp/hfcache
+ENV HF_HOME=/tmp/hfcache
+
 # Set timezone to Pakistan (PKT)
 ENV TZ=Asia/Karachi
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -8,10 +12,12 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /app
 
 # Install build + runtime deps
-# Added libsndfile1 for better audio processing support often needed by ML libraries
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc g++ curl \
-    libgl1 libglib2.0-0 libsndfile1 \
+RUN apt-get update && apt-get install -y \
+    git \
+    libglib2.0-0 \
+    libgl1 \
+    build-essential \
+    # Clean up apt caches to save space in this layer
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (fast installer)
@@ -20,11 +26,11 @@ RUN pip install --no-cache-dir uv
 # Copy pyproject.toml
 COPY pyproject.toml ./
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    uv pip install --system --no-cache \
-    --find-links "https://download.pytorch.org/whl/torch_stable.html" \
-    "torch==2.3.0+cpu" "torchvision==0.18.0+cpu"
-
+# Install CPU-only PyTorch and other requirements
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch \
+    # Clean up pip cache which might be left over in the temp dir
+    && rm -rf /root/.cache/pip
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     uv pip install --system --no-cache \
@@ -39,17 +45,25 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app
 
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+# Set environment variables
+ENV TRANSFORMERS_CACHE=/app/hfcache
+ENV HF_HOME=/app/hfcache
+ENV PYTHONUNBUFFERED=1
+
+# Copy the minimum necessary system dependencies from the builder stage
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libglib* /usr/lib/x86_64-linux-gnu/
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libgthread* /usr/lib/x86_64-linux-gnu/
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libgobject* /usr/lib/x86_64-linux-gnu/
+COPY --from=builder /usr/lib/x86_64-linux-gnu/libmount* /usr/lib/x86_64-linux-gnu/
+
 
 # Runtime deps only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgl1 libglib2.0-0 libsndfile1 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd -m appuser
+RUN useradd -m appuser
 
 # Copy installed packages
 COPY --from=builder /usr/local /usr/local
+
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
 # Copy app
 COPY ./app ./app
@@ -59,7 +73,6 @@ COPY docker/docker-entrypoint.sh /usr/local/bin/
 
 # Models (pre-downloaded)
 COPY ./app/ml_models ./ml_models
-COPY ./app/pytorch_models ./pytorch_models
 
 # Setup
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \

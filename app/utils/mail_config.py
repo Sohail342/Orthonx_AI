@@ -1,10 +1,10 @@
-import logging
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import cast
 
 from app.core.config import settings
+from app.utils.logging_utils import get_logger
 
 SMTP_HOST = settings.SMTP_HOST
 SMTP_PORT = settings.SMTP_PORT
@@ -12,7 +12,7 @@ SMTP_USER = settings.SMTP_USER
 SMTP_PASSWORD = settings.SMTP_PASSWORD
 FROM_EMAIL = settings.EMAILS_FROM
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def send_smtp_email(to_email: str, subject: str, html_body: str) -> dict:

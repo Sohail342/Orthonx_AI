@@ -3,7 +3,7 @@
 
 # Python files
 *.py text eol=lf
-
 # Docker files
 Dockerfile text eol=lf
 docker-compose*.yml text eol=lf
+app/ml_models/* filter=lfs diff=lfs merge=lfs -text

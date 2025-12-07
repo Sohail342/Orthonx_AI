@@ -30,7 +30,9 @@ def create_application() -> FastAPI:
             allow_headers=["*"],
         )
     application.include_router(api_v1_router)
-    application.include_router(verify_router, prefix="/custom", tags=["auth"])
+    application.include_router(
+        verify_router, prefix="/custom", tags=["Custom Auth for Verification"]
+    )
     return application
 
 

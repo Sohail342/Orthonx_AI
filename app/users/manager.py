@@ -1,4 +1,3 @@
-import logging
 from typing import AsyncGenerator, Optional, cast
 
 from fastapi import Depends, HTTPException, Request, status
@@ -13,11 +12,13 @@ from app.database.session import get_db
 from app.models.users import User
 from app.schemas.user import UserCreate
 from app.users.dependencies import get_user_db
+from app.utils.logging_utils import get_logger
 from app.utils.users import get_by_phone_no
 from app.workers.tasks import send_password_reset_email, send_verification_request
 
 SECRET = settings.SECRET_KEY
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__)
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, str]):

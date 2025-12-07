@@ -37,6 +37,7 @@ services:
       - "6379:6379"
 
   celery:
+    entrypoint: ""
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -52,6 +53,7 @@ services:
       - redis
 
   celery-beat:
+    entrypoint: ""
     build:
       context: .
       dockerfile: docker/Dockerfile

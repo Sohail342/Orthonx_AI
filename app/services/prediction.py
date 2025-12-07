@@ -1,235 +1,183 @@
 import base64
 import io
-import logging
-from io import BytesIO
 
-import cv2
 import numpy as np
 import onnxruntime as ort
 import torch
-import torch.nn as nn
-from fastapi import File, UploadFile
-from fastapi.responses import JSONResponse
-from PIL import Image
+from fastapi import File, HTTPException, UploadFile
+from optimum.onnxruntime import ORTModelForImageClassification
+from PIL import Image, ImageDraw
+from transformers import AutoImageProcessor
 
-from app.utils.gradcam import GradCAM
+from app.utils.logging_utils import get_logger
 
-console_handler = logging.StreamHandler()
-
-formatter = logging.Formatter("%(asctime)s | %(name)s | %(levelname)s | %(message)s")
-console_handler.setFormatter(formatter)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(console_handler)
-
-BODY_PART_MODEL = "app/ml_models/bodypart_detector.onnx"
-FRACTURE_MODEL = "app/ml_models/fracture_detector.onnx"
-BODY_PARTS = ["ELBOW", "FINGER", "FOREARM", "HAND", "HUMERUS", "SHOULDER", "WRIST"]
-MEAN = 0.2059
-STD = 0.1768
-
-# Initialize ONNX Runtime sessions
-logger.info("Loading ONNX models...")
-body_session = ort.InferenceSession(BODY_PART_MODEL, providers=["CPUExecutionProvider"])
-frac_session = ort.InferenceSession(FRACTURE_MODEL, providers=["CPUExecutionProvider"])
+logger = get_logger(__name__)
 
 
-class CNN(nn.Module):
-    def __init__(self, num_classes: int, dropout: float = 0.5) -> None:
-        super(CNN, self).__init__()
-        self.features = nn.Sequential(
-            # Block 1
-            nn.Conv2d(1, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            # Block 2
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            # Block 3
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            # Block 4
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            # Block 5
-            nn.Conv2d(256, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-        )
-        self.classifier = nn.Sequential(
-            nn.Dropout(dropout),
-            nn.Linear(512 * 7 * 7, 512),  # 224 → 112 → 56 → 28 → 14 → 7
-            nn.ReLU(inplace=True),
-            nn.Dropout(dropout),
-            nn.Linear(512, num_classes),
-        )
+# Load Bone Fracture detection ONNX model
+try:
+    ort_session = ort.InferenceSession("app/ml_models/bone_fracture_detection.onnx")
+    logger.info("Successfully loaded Bone Fracture detection ONNX Model")
+except Exception as e:
+    raise RuntimeError(f"Failed to load ONNX Model: {e}")
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.features(x)
-        x = x.view(x.size(0), -1)  # Flatten
-        x = self.classifier(x)
-        return x
+# Load Classification Model
+try:
+    CLASS_ONNX_PATH = "app/ml_models/bone_fracture_model_onnx"
+    DETR_CONFIDENCE_THRESHOLD = 0.85
 
-    def preprocess_image(self, image_bytes: bytes) -> np.ndarray:
-        img = Image.open(io.BytesIO(image_bytes)).convert("L")
-        img = img.resize((224, 224))
-        arr = np.array(img, dtype=np.float32) / 255.0
-        arr = (arr - MEAN) / STD
-        arr = arr.reshape(1, 1, 224, 224)  # (N, C, H, W)
-        return arr
+    ort_class_model = ORTModelForImageClassification.from_pretrained(CLASS_ONNX_PATH)
+    class_processor = AutoImageProcessor.from_pretrained(CLASS_ONNX_PATH)
+    CLASS_ID_TO_LABEL = ort_class_model.config.id2label
+    logger.info("Successfully loaded Classification Model")
+except Exception as e:
+    raise RuntimeError(f"Failed to load Classification Model: {e}")
 
-    async def analyze_service(self, file: UploadFile = File(...)) -> JSONResponse:
+
+class BoneFracturePrediction:
+    def __init__(self) -> None:
+        self.MODEL_SIZE = 800  # DETR uses 800 pixels for the longest side
+        self.MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        self.STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+
+    def preprocess(
+        self, image: Image.Image
+    ) -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
+        w, h = image.size
+        scale = self.MODEL_SIZE / max(h, w)
+        new_w, new_h = int(w * scale), int(h * scale)
+        image_resized = image.resize((new_w, new_h))
+        img_array = np.array(image_resized).astype(np.float32) / 255.0
+        img_array = (img_array - self.MEAN) / self.STD
+        padded = np.zeros((self.MODEL_SIZE, self.MODEL_SIZE, 3), dtype=np.float32)
+        padded[:new_h, :new_w, :] = img_array
+        pixel_values = np.transpose(padded, (2, 0, 1))
+        return np.expand_dims(pixel_values, axis=0), (w, h), (new_w, new_h)
+
+    def postprocess(
+        self,
+        logits: np.ndarray,
+        boxes: np.ndarray,
+        original_size: tuple[int, int],
+        new_size: tuple[int, int],
+        threshold: float = 0.05,
+    ) -> list[list[float]]:
+        orig_w, orig_h = original_size
+        new_w, new_h = new_size
+
+        # Calculate the single scale factor for denormalization
+        scale_factor = max(orig_h, orig_w) / self.MODEL_SIZE
+
+        logits_tensor = torch.tensor(logits)
+        boxes_tensor = torch.tensor(boxes)
+
+        probs = logits_tensor.softmax(-1)[..., 1]
+        keep = probs > threshold
+        kept_boxes = boxes_tensor[keep].numpy()
+
+        fracture_boxes = []
+
+        for box in kept_boxes:
+            # 1. Convert from normalized [x_c, y_c, w, h] to [x0, y0, x1, y1]
+            x_c, y_c, w, h = box
+
+            x0_norm = x_c - w / 2
+            y0_norm = y_c - h / 2
+            x1_norm = x_c + w / 2
+            y1_norm = y_c + h / 2
+
+            # Convert normalized [0, 1] coordinates to 800x800 pixel space:
+            x0_800 = x0_norm * self.MODEL_SIZE
+            x1_800 = x1_norm * self.MODEL_SIZE
+            y0_800 = y0_norm * self.MODEL_SIZE
+            y1_800 = y1_norm * self.MODEL_SIZE
+
+            # map from 800x800 space back to original space using the inverse scale factor
+            final_x0 = x0_800 * scale_factor
+            final_x1 = x1_800 * scale_factor
+            final_y0 = y0_800 * scale_factor
+            final_y1 = y1_800 * scale_factor
+
+            # Final checks and type casting:
+            final_x0 = max(0.0, min(final_x0, final_x1))
+            final_y0 = max(0.0, min(final_y0, final_y1))
+            final_x1 = min(float(orig_w), max(final_x0, final_x1))
+            final_y1 = min(float(orig_h), max(final_y0, final_y1))
+
+            fracture_boxes.append(
+                [float(final_x0), float(final_y0), float(final_x1), float(final_y1)]
+            )
+
+        return fracture_boxes
+
+    async def run_inference_detection(self, image_file: Image.Image) -> dict:
+        try:
+            contents = await image_file.read()
+            image = Image.open(io.BytesIO(contents)).convert("RGB")
+
+            original_buffer = io.BytesIO()
+            image.save(original_buffer, format="PNG")
+            original_img_str = base64.b64encode(original_buffer.getvalue()).decode(
+                "utf-8"
+            )
+
+            # Preprocess
+            pixel_values, orig_size, scale = self.preprocess(image)
+
+            # ONNX inference
+            outputs = ort_session.run(None, {"pixel_values": pixel_values})
+            logits = outputs[0]
+            boxes = outputs[1]
+
+            # Post-process
+            fracture_boxes = self.postprocess(logits, boxes, orig_size, scale)
+
+            # Draw boxes on image
+            annotated_image = image.copy()
+            draw = ImageDraw.Draw(annotated_image)
+            for box in fracture_boxes:
+                draw.rectangle(box, outline="red", width=3)
+
+            annotated_buffer = io.BytesIO()
+            annotated_image.save(annotated_buffer, format="PNG")
+            annotated_img_str = base64.b64encode(annotated_buffer.getvalue()).decode(
+                "utf-8"
+            )
+
+            return {
+                "original_image": original_img_str,
+                "annotated_image": annotated_img_str,
+                "fracture_boxes": fracture_boxes,
+            }
+        except Exception as e:
+            raise HTTPException(500, f"Internal Server Error (Detection): {e}")
+
+    async def run_inference_fracture(self, file: UploadFile = File(...)) -> dict:
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(400, "File must be an image.")
+
         try:
             img_bytes = await file.read()
-            x = self.preprocess_image(img_bytes)
+            image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
 
-            # Body Part Prediction
-            body_logits = body_session.run(
-                None, {body_session.get_inputs()[0].name: x}
-            )[0]
-            body_probs = np.exp(body_logits) / np.sum(np.exp(body_logits), axis=1)
-            body_idx = int(np.argmax(body_logits, axis=1)[0])
-            body_part = BODY_PARTS[body_idx]
-            confidence = float(body_probs[0][body_idx])
+            inputs = class_processor(images=image, return_tensors="np")
+            ort_inputs = {"pixel_values": inputs["pixel_values"]}
 
-            # Fracture Prediction
-            frac_logit = float(
-                frac_session.run(None, {frac_session.get_inputs()[0].name: x})[0][0][0]
-            )
-            frac_prob = float(1 / (1 + np.exp(-frac_logit)))
+            outputs = ort_class_model(**ort_inputs)
+            logits = outputs["logits"]
 
-            response = {
-                "body_part": body_part,
-                "confidence": round(confidence, 4),
-                "fracture": {
-                    "probability": round(frac_prob, 4),
-                    "positive": frac_prob > 0.5,
-                    "risk": (
-                        "HIGH"
-                        if frac_prob > 0.7
-                        else "MEDIUM"
-                        if frac_prob > 0.5
-                        else "LOW"
-                    ),
-                },
-                "recommendation": (
-                    "URGENT REVIEW"
-                    if frac_prob > 0.7
-                    else "Follow-up"
-                    if frac_prob > 0.5
-                    else "Likely normal"
-                ),
+            probs = np.exp(logits) / np.exp(logits).sum(axis=1, keepdims=True)
+            cls_idx = int(np.argmax(logits, axis=1)[0])
+            confidence = float(probs[0][cls_idx] * 100)
+
+            return {
+                "filename": file.filename,
+                "prediction": CLASS_ID_TO_LABEL[cls_idx],
+                "confidence_percent": f"{confidence:.2f}%",
             }
 
-            return JSONResponse(response)
-
         except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
-
-    async def analyze_with_gradcam_service(
-        self, file: UploadFile = File(...)
-    ) -> JSONResponse:
-        try:
-            img_bytes = await file.read()
-            x_np = self.preprocess_image(img_bytes)  # (1,1,224,224) numpy
-            x_torch = torch.from_numpy(x_np).float()
-
-            # ONNX INFERENCE
-            body_logits = body_session.run(
-                None, {body_session.get_inputs()[0].name: x_np}
-            )[0]
-            body_probs = np.exp(body_logits) / np.sum(np.exp(body_logits), axis=1)
-            body_idx = int(np.argmax(body_logits, axis=1)[0])
-            body_part = BODY_PARTS[body_idx]
-
-            frac_logit = float(
-                frac_session.run(None, {frac_session.get_inputs()[0].name: x_np})[0][0][
-                    0
-                ]
-            )
-            frac_prob = 1 / (1 + np.exp(-frac_logit))
-            is_positive = frac_prob > 0.5
-
-            # ORIGINAL IMAGE (ALWAYS RETURNED)
-            orig_img = Image.open(io.BytesIO(img_bytes)).convert("L")
-            orig_img = orig_img.resize((224, 224))
-            orig_np = np.array(orig_img)
-            orig_np_rgb = cv2.cvtColor(orig_np, cv2.COLOR_GRAY2RGB)
-
-            # Encode original to base64
-            orig_buf = BytesIO()
-            Image.fromarray(orig_np_rgb).save(orig_buf, format="PNG")
-            orig_b64 = base64.b64encode(orig_buf.getvalue()).decode("utf-8")
-
-            # GRADCAM (ONLY IF POSITIVE)
-            heatmap_b64 = None
-            if is_positive:
-                cam = gradcam.generate_cam(x_torch, target_class=0)
-                cam = (cam * 255).astype(np.uint8)
-                cam = cv2.applyColorMap(cam, cv2.COLORMAP_JET)
-                cam = cv2.cvtColor(cam, cv2.COLOR_BGR2RGB)
-
-                # Overlay with original
-                overlay = cv2.addWeighted(orig_np_rgb, 0.6, cam, 0.4, 0)
-                overlay_pil = Image.fromarray(overlay)
-
-                # Encode heatmap to base64
-                buf = BytesIO()
-                overlay_pil.save(buf, format="PNG")
-                heatmap_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-
-            # RESPONSE
-            response = {
-                "body_part": body_part,
-                "confidence": round(float(body_probs[0][body_idx]), 4),
-                "fracture": {
-                    "probability": round(frac_prob, 4),
-                    "positive": bool(is_positive),
-                    "risk": (
-                        "HIGH"
-                        if frac_prob > 0.7
-                        else "MEDIUM"
-                        if frac_prob > 0.5
-                        else "LOW"
-                    ),
-                },
-                "recommendation": (
-                    "URGENT REVIEW"
-                    if frac_prob > 0.7
-                    else "Follow-up"
-                    if frac_prob > 0.5
-                    else "Likely normal"
-                ),
-                # Always return original
-                "original_image": f"data:image/png;base64,{orig_b64}",
-                # Only return heatmap if fracture is positive
-                "heatmap": (
-                    f"data:image/png;base64,{heatmap_b64}" if heatmap_b64 else None
-                ),
-            }
-
-            return JSONResponse(response)
-
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, status_code=500)
+            raise HTTPException(500, f"Internal Server Error (Classification): {e}")
 
 
-logger.info("Loading PyTorch fracture model for Grad-CAM...")
-cnn_service = CNN(num_classes=1, dropout=0.6)
-state_dict = torch.load("app/pytorch_models/fracture_model.pth", map_location="cpu")
-state_dict = {
-    k: v for k, v in state_dict.items() if not k.endswith(".num_batches_tracked")
-}
-cnn_service.load_state_dict(state_dict, strict=True)
-cnn_service.eval()
-
-# Initialize Grad-CAM on last ReLU in features
-gradcam = GradCAM(cnn_service, target_layer_name="features.17")
+bone_fracture_predictor = BoneFracturePrediction()

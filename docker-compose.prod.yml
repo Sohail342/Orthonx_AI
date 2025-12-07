@@ -104,6 +104,7 @@ services:
       - backend
 
   celery:
+    entrypoint: ""
     image: ${APP_IMAGE}
     env_file:
       - .env.prod
@@ -129,6 +130,7 @@ services:
       - backend
 
   celery-beat:
+    entrypoint: ""
     image: ${APP_IMAGE}
     env_file:
       - .env.prod
