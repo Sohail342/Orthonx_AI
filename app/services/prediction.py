@@ -2,36 +2,19 @@ import base64
 import io
 
 import numpy as np
-import onnxruntime as ort
 import torch
 from fastapi import File, HTTPException, UploadFile
-from optimum.onnxruntime import ORTModelForImageClassification
 from PIL import Image, ImageDraw
-from transformers import AutoImageProcessor
 
+from app.utils.load_models import (
+    CLASS_ID_TO_LABEL,
+    class_processor,
+    ort_class_model,
+    ort_session,
+)
 from app.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-
-
-# Load Bone Fracture detection ONNX model
-try:
-    ort_session = ort.InferenceSession("app/ml_models/bone_fracture_detection.onnx")
-    logger.info("Successfully loaded Bone Fracture detection ONNX Model")
-except Exception as e:
-    raise RuntimeError(f"Failed to load ONNX Model: {e}")
-
-# Load Classification Model
-try:
-    CLASS_ONNX_PATH = "app/ml_models/bone_fracture_model_onnx"
-    DETR_CONFIDENCE_THRESHOLD = 0.85
-
-    ort_class_model = ORTModelForImageClassification.from_pretrained(CLASS_ONNX_PATH)
-    class_processor = AutoImageProcessor.from_pretrained(CLASS_ONNX_PATH)
-    CLASS_ID_TO_LABEL = ort_class_model.config.id2label
-    logger.info("Successfully loaded Classification Model")
-except Exception as e:
-    raise RuntimeError(f"Failed to load Classification Model: {e}")
 
 
 class BoneFracturePrediction:

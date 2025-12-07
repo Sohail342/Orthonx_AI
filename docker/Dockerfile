@@ -2,7 +2,6 @@
 FROM python:3.12-slim AS builder
 
 # Set environment variables for Hugging Face cache
-ENV TRANSFORMERS_CACHE=/tmp/hfcache
 ENV HF_HOME=/tmp/hfcache
 
 # Set timezone to Pakistan (PKT)
@@ -46,7 +45,6 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 WORKDIR /app
 
 # Set environment variables
-ENV TRANSFORMERS_CACHE=/app/hfcache
 ENV HF_HOME=/app/hfcache
 ENV PYTHONUNBUFFERED=1
 
@@ -71,8 +69,8 @@ COPY ./alembic.ini ./
 COPY ./alembic ./alembic
 COPY docker/docker-entrypoint.sh /usr/local/bin/
 
-# Models (pre-downloaded)
-COPY ./app/ml_models ./ml_models
+# Copy ML models
+COPY ./app/ml_models /app/ml_models
 
 # Setup
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \

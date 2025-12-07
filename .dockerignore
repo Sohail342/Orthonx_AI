@@ -60,6 +60,14 @@ htmlcov/
 .pytest_cache/
 .tox/
 
+# Ml moldels
+app/ml_models/*.onnx
+# ml models
+*.pt
+*.onnx
+*.onnx.data
+*.pth
+
 # Environment files
 .env.local
 .env.development.local
@@ -69,6 +77,9 @@ htmlcov/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# huggingface cache
+hfcache/
 
 #env variables
 .env.prod

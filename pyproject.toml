@@ -29,6 +29,7 @@ dependencies = [
     "transformers>=4.55.4",
     "optimum>=2.0.0",
     "optimum[onnxruntime]",
+    "huggingface_hub",
 ]
 
 [dependency-groups]

@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
+    HF_API_KEY: str = "HF_API_KEY"
     # Facebook OAuth
     FACEBOOK_CLIENT_ID: str = "FACEBOOK_CLIENT_ID"
 

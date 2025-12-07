@@ -38,9 +38,19 @@ venv.bak/
 
 .mypy_cache/
 
+# ml models
+*.pt
+*.onnx
+*.onnx.data
+*.pth
+app/ml_models/*
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Ignore large ML models
+app/ml_models/*.keras
 
 # Database
 *.db
