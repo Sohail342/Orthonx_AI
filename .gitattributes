@@ -1,6 +1,5 @@
 # Ensure shell scripts always use LF line endings
 *.sh text eol=lf
-
 # Python files
 *.py text eol=lf
 # Docker files
