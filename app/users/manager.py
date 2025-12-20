@@ -33,13 +33,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, str]):
         self, user: User, token: str, request: Optional[Request] = None
     ) -> None:
         """Send varification mail in background"""
-        send_verification_request.delay(user.email, user.first_name, token)
+        send_verification_request.delay(user.email, user.name, token)
         logger.info(f"Send Verfication trigger for user {user.id}.")
 
     async def on_after_forgot_password(
         self, user: User, token: str, request: Optional[Request] = None
     ) -> None:
-        send_password_reset_email.delay(user.email, user.first_name, token)
+        send_password_reset_email.delay(user.email, user.name, token)
         logger.info(f"User {user.id} has forgot their password.")
 
     async def authenticate(

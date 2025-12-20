@@ -2,6 +2,7 @@
 
 import re
 import uuid
+from enum import Enum
 from typing import Literal, Optional, Type
 
 from fastapi_users import schemas
@@ -11,11 +12,18 @@ from typing_extensions import Annotated
 PAKISTAN_MOBILE_REGEX = re.compile(r"^(?:\+92|0)3[0-9]{9}$")
 
 
+class UserType(str, Enum):
+    USER = "user"
+    HOSPITAL = "hospital"
+    DOCTOR = "doctor"
+
+
 class UserRead(schemas.BaseUser[uuid.UUID]):
     """User Read Schema"""
 
     email: Optional[str] = None
-    first_name: Optional[str] = None
+    user_type: UserType = UserType.USER
+    name: Optional[str] = None
     phone_number: Optional[str] = None
 
     @field_validator("phone_number")
@@ -45,7 +53,14 @@ class UserCreate(schemas.BaseUserCreate):
             exclude=True,
         ),
     ]
-    first_name: Optional[str] = None
+    user_type: Annotated[
+        UserType,
+        Field(
+            ...,
+            description="User type (e.g user, doctor, or hospital)",
+        ),
+    ] = UserType.USER
+    name: Optional[str] = None
     phone_number: Optional[
         Annotated[
             str,
@@ -84,6 +99,8 @@ class UserCreate(schemas.BaseUserCreate):
             # Ensure phone_number is unset
             data["phone_number"] = None
 
+        else:
+            raise ValueError("registration_type must be either 'email' or 'phone'")
         return data
 
     @field_validator("registration_type")
@@ -94,9 +111,13 @@ class UserCreate(schemas.BaseUserCreate):
             )
         return v
 
+    model_config = {
+        "extra": "forbid",
+    }
+
 
 class UserUpdate(schemas.BaseUserUpdate):
     """User Update Schema"""
 
-    first_name: Optional[str] = None
+    name: Optional[str] = None
     phone_number: Optional[str] = None

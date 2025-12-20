@@ -16,20 +16,107 @@ def send_verification_request(email: str, name: str, token: str) -> None:
 
     subject = "Verify your account"
     html = f"""
+    <!DOCTYPE html>
     <html>
-    <body style="font-family: Arial, sans-serif; background-color:#f9fafb; color:#111827;">
-        <table style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:24px;">
-            <tr><td style="text-align:center;">
-                <h1 style="color:#4f46e5;">Welcome to {settings.PROJECT_NAME} 🎉</h1>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                background-color: #F5F7FF;
+                margin: 0;
+                padding: 0;
+                color: #15173D;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 40px auto;
+                background: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+                border-top: 5px solid #0062FF;
+            }}
+            .header {{
+                background: #ffffff;
+                padding: 40px 0 20px;
+                text-align: center;
+            }}
+            .logo {{
+                width: 180px;
+                height: auto;
+            }}
+            .content {{
+                padding: 20px 40px 40px;
+                text-align: center;
+            }}
+            .content h2 {{
+                color: #15173D;
+                font-size: 24px;
+                font-weight: 700;
+                margin-bottom: 20px;
+                letter-spacing: -0.5px;
+            }}
+            .content p {{
+                font-size: 16px;
+                line-height: 1.6;
+                color: #596080;
+                margin-bottom: 24px;
+            }}
+            .btn {{
+                background: #0062FF;
+                color: #ffffff;
+                padding: 16px 32px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 16px;
+                display: inline-block;
+                margin: 10px 0;
+                box-shadow: 0 4px 12px rgba(0, 98, 255, 0.2);
+                transition: background-color 0.2s;
+            }}
+            .btn:hover {{
+                background: #0048c2;
+            }}
+            .footer {{
+                background: #F9FAFB;
+                padding: 20px;
+                text-align: center;
+                border-top: 1px solid #E5E7EB;
+            }}
+            .footer p {{
+                font-size: 12px;
+                color: #9CA3AF;
+                margin: 5px 0;
+            }}
+            .link-text {{
+                color: #0062FF;
+                word-break: break-all;
+                font-size: 14px;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="https://res.cloudinary.com/dms0a62ec/image/upload/v1766265717/pk06hclsmw465fdjcebl.jpg" alt="{settings.PROJECT_NAME}" class="logo">
+            </div>
+            <div class="content">
+                <h2>Welcome to Orthonx!</h2>
                 <p>Hi <strong>{name}</strong>,</p>
-                <p>Thanks for signing up! Please verify your account by clicking below:</p>
-                <a href="{verify_url}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
-                    Verify Account
-                </a>
-                <p style="font-size:12px;color:#6b7280;">If the button doesn't work, copy this link:<br>
-                <a href="{verify_url}" style="color:#4f46e5;">{verify_url}</a></p>
-            </td></tr>
-        </table>
+                <p>Thank you for signing up. Please verify your email address to access your dashboard and start using our clinical AI tools.</p>
+
+                <a href="{verify_url}" class="btn">Verify Account</a>
+
+                <p style="margin-top: 30px; font-size: 14px; color: #9CA3AF;">Or copy this link to your browser:</p>
+                <a href="{verify_url}" class="link-text">{verify_url}</a>
+            </div>
+            <div class="footer">
+                <p>&copy; {settings.PROJECT_NAME}. All rights reserved.</p>
+            </div>
+        </div>
     </body>
     </html>
     """
@@ -47,21 +134,109 @@ def send_password_reset_email(email: str, name: str, token: str) -> None:
 
     subject = "Reset Your Password"
     html = f"""
+    <!DOCTYPE html>
     <html>
-    <body style="font-family: Arial, sans-serif; background-color:#f9fafb; color:#111827;">
-        <table style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:24px;">
-            <tr><td style="text-align:center;">
-                <h1 style="color:#4f46e5;">Reset Your Password</h1>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            body {{
+                font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                background-color: #F5F7FF;
+                margin: 0;
+                padding: 0;
+                color: #15173D;
+            }}
+            .container {{
+                max-width: 600px;
+                margin: 40px auto;
+                background: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+                border-top: 5px solid #0062FF;
+            }}
+            .header {{
+                background: #ffffff;
+                padding: 40px 0 20px;
+                text-align: center;
+            }}
+            .logo {{
+                width: 180px;
+                height: auto;
+            }}
+            .content {{
+                padding: 20px 40px 40px;
+                text-align: center;
+            }}
+            .content h2 {{
+                color: #15173D;
+                font-size: 24px;
+                font-weight: 700;
+                margin-bottom: 20px;
+                letter-spacing: -0.5px;
+            }}
+            .content p {{
+                font-size: 16px;
+                line-height: 1.6;
+                color: #596080;
+                margin-bottom: 24px;
+            }}
+            .btn {{
+                background: #0062FF;
+                color: #ffffff;
+                padding: 16px 32px;
+                border-radius: 8px;
+                text-decoration: none;
+                font-weight: 600;
+                font-size: 16px;
+                display: inline-block;
+                margin: 10px 0;
+                box-shadow: 0 4px 12px rgba(0, 98, 255, 0.2);
+                transition: background-color 0.2s;
+            }}
+            .btn:hover {{
+                background: #0048c2;
+            }}
+            .footer {{
+                background: #F9FAFB;
+                padding: 20px;
+                text-align: center;
+                border-top: 1px solid #E5E7EB;
+            }}
+            .footer p {{
+                font-size: 12px;
+                color: #9CA3AF;
+                margin: 5px 0;
+            }}
+            .link-text {{
+                color: #0062FF;
+                word-break: break-all;
+                font-size: 14px;
+                text-decoration: none;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <img src="https://res.cloudinary.com/dms0a62ec/image/upload/v1766265717/pk06hclsmw465fdjcebl.jpg" alt="{settings.PROJECT_NAME}" class="logo">
+            </div>
+            <div class="content">
+                <h2>Reset Password</h2>
                 <p>Hello <strong>{name}</strong>,</p>
-                <p>Click the button below to reset your password:</p>
-                <a href="{reset_url}" style="background:#4f46e5;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
-                    Reset Password
-                </a>
-                <p style="font-size:12px;color:#6b7280;">If you didn’t request this, ignore this email.</p>
-                <p style="font-size:12px;color:#6b7280;">Or copy this link:<br>
-                <a href="{reset_url}" style="color:#4f46e5;">{reset_url}</a></p>
-            </td></tr>
-        </table>
+                <p>We received a request to reset your password. Click the button below to choose a new one.</p>
+
+                <a href="{reset_url}" class="btn">Reset Password</a>
+
+                <p style="margin-top: 30px; font-size: 14px; color: #9CA3AF;">Or copy this link to your browser:</p>
+                <a href="{reset_url}" class="link-text">{reset_url}</a>
+
+                <p style="margin-top: 20px; font-size: 14px; color: #9CA3AF;">If you didn't request a password reset, you can safely ignore this email.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; {settings.PROJECT_NAME}. All rights reserved.</p>
+            </div>
+        </div>
     </body>
     </html>
     """

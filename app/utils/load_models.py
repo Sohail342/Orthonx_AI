@@ -33,6 +33,7 @@ try:
             cache_dir="app/ml_models/bone_fracture_detection",
             token=HF_TOKEN,
         )
+
     else:
         detection_model_path = str(model_path)
 

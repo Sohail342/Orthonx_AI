@@ -63,7 +63,6 @@ htmlcov/
 # Ml moldels
 app/ml_models/*.onnx
 # ml models
-*.pt
 *.onnx
 *.onnx.data
 *.pth

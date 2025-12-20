@@ -30,6 +30,7 @@ dependencies = [
     "optimum>=2.0.0",
     "optimum[onnxruntime]",
     "huggingface_hub",
+    "ultralytics",
 ]
 
 [dependency-groups]
@@ -51,6 +52,9 @@ line-length = 88
 target-version = "py310"
 lint.extend-select = ["I"]
 fix = true
+exclude = [
+    ".venv", "my_cahe", "ruff_cache"
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
@@ -63,3 +67,6 @@ python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
+exclude = [
+    "alembic/",
+]
