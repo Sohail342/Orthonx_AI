@@ -38,14 +38,12 @@ class YOLOGradCam:
         # Initialize variables
         explanation_img = None
         gradcam_img = None
-        explanation_url = None
-        gradcam_url = None
+        explanation_url = ""
+        gradcam_url = ""
 
         try:
             contents = await file.read()
-            # Load image and convert to RGB
             image = Image.open(io.BytesIO(contents)).convert("RGB")
-            # Create BGR copy for OpenCV operations (GradCAM, drawing)
             image_rgb = np.array(image)
             image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
@@ -60,9 +58,6 @@ class YOLOGradCam:
             )
 
             # YOLO inference
-            # Pass PIL image directly to Ultralytics
-            # Use imgsz=1024 as per training config
-            # Set confidence to 0.01 since model is currently producing low confidence detections
             results = MODEL(image, conf=0.01, imgsz=1024)
 
             logger.info(f"Inference results: {len(results)} results found")
@@ -77,11 +72,6 @@ class YOLOGradCam:
 
             # Ensure uint8 type and contiguous array (OpenCV requirement)
             results_plotted = np.ascontiguousarray(results_plotted, dtype=np.uint8)
-
-            # DEBUG: Upload the EXACT input image used for CV2/GradCAM to verify colors
-            # (image_bgr should look correct - blueish if viewed as RGB, but correct for CV2)
-            # _, debug_input_encoded = cv2.imencode(".jpg", image_bgr)
-            # CloudinaryUtils.upload_bytes_to_cloudinary(debug_input_encoded.tobytes(), public_id=f"detections/{detection_id}_debug_input")
 
             _, result_encoded = cv2.imencode(".jpg", results_plotted)
             result_bytes = result_encoded.tobytes()
