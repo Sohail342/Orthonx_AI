@@ -7,6 +7,8 @@ from app.api.v1.api import api_v1_router
 from app.api.v1.endpoints.custom_auth import verify_router
 from app.core.config import settings
 
+CORS = [str(origin)[:-1] for origin in settings.BACKEND_CORS_ORIGINS]
+
 
 def create_application() -> FastAPI:
     """Create FastAPI app with middleware and routes."""
@@ -22,13 +24,24 @@ def create_application() -> FastAPI:
 
     # Set up CORS
     if settings.BACKEND_CORS_ORIGINS:
-        application.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        if settings.ENVIRONMENT == "development":
+            application.add_middleware(
+                CORSMiddleware,
+                allow_origins=CORS,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+        else:
+            application.add_middleware(
+                CORSMiddleware,
+                allow_origins=CORS,
+                allow_credentials=True,
+                allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+                allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+                expose_headers=["X-Process-Time"],
+                max_age=3600,
+            )
     application.include_router(api_v1_router)
     application.include_router(
         verify_router, prefix="/custom", tags=["Custom Auth for Verification"]

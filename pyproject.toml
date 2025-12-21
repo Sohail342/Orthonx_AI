@@ -1,6 +1,6 @@
 [project]
 name = "fyp_backend"
-version = "v0.1.2"
+version = "v0.1.3"
 description = "FYP"
 authors = [
     {name = "Sohail"},
@@ -31,6 +31,7 @@ dependencies = [
     "optimum[onnxruntime]",
     "huggingface_hub",
     "ultralytics",
+    "cloudinary>=1.44.1",
 ]
 
 [dependency-groups]
@@ -53,7 +54,7 @@ target-version = "py310"
 lint.extend-select = ["I"]
 fix = true
 exclude = [
-    ".venv", "my_cahe", "ruff_cache"
+    ".venv", "my_cahe", "ruff_cache", "*.ipynb"
 ]
 
 [tool.ruff.lint.isort]

@@ -1,5 +1,6 @@
 """User schemas for FastAPI-Users integration."""
 
+import datetime
 import re
 import uuid
 from enum import Enum
@@ -121,3 +122,21 @@ class UserUpdate(schemas.BaseUserUpdate):
 
     name: Optional[str] = None
     phone_number: Optional[str] = None
+
+
+class UserDiagnosisHistoryRequest(schemas.BaseModel):
+    """User Diagnosis History Request Schema"""
+
+    id: int
+    user_id: uuid.UUID
+    public_id: str
+    timestamp: datetime.datetime
+    uploaded_image_url: str
+    result_image_url: str
+    explanation_image_url: str
+    gradcam_image_url: str
+    report_url: str = ""
+    diagnosis_data: dict
+
+    class Config:
+        from_attributes = True
