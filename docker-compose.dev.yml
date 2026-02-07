@@ -46,8 +46,8 @@ services:
     env_file:
       - .env.dev
     volumes:
-      - ./app:/app/app
-    command: celery -A app.workers.celery_app worker --loglevel=INFO
+      - ./app:/app/app  # Mount source for live reload
+    command: celery -A app.workers.celery_app worker -Q default --loglevel=INFO
     depends_on:
       - db
       - redis
@@ -62,7 +62,7 @@ services:
     env_file:
       - .env.dev
     volumes:
-      - ./app:/app/app
+      - ./app:/app/app  # Mount source for live reload
     command: celery -A app.workers.celery_app beat --loglevel=INFO
     depends_on:
       - db

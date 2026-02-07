@@ -13,6 +13,7 @@ SMTP_PASSWORD = settings.SMTP_PASSWORD
 FROM_EMAIL = settings.EMAILS_FROM
 
 logger = get_logger(__name__)
+logger.info(f"email config loaded {FROM_EMAIL}")
 
 
 def send_smtp_email(to_email: str, subject: str, html_body: str) -> dict:
@@ -30,7 +31,7 @@ def send_smtp_email(to_email: str, subject: str, html_body: str) -> dict:
             server.starttls()
             server.ehlo()
             server.login(cast(str, SMTP_USER), cast(str, SMTP_PASSWORD))
-            server.send_message(msg)
+            server.send_message(msg, from_addr=SMTP_USER, to_addrs=[to_email])
             logger.info(f"Email sent to {to_email}")
 
         return {"status": "sent", "recipient": to_email}

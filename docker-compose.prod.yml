@@ -25,41 +25,52 @@ services:
       retries: 3
       start_period: 30s
     labels:
-      - traefik.enable=true
+      - "traefik.enable=true"
+      # HTTP Router (Redirects to HTTPS)
+      - "traefik.http.routers.web-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`) || Host(`www.${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.web-${PROJECT_NAME}.entrypoints=web"
+      - "traefik.http.routers.web-${PROJECT_NAME}.middlewares=redirect-to-https"
 
-      # HTTP router (only needed for http challenge)
-      - traefik.http.routers.web.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)
-      - traefik.http.routers.web.entrypoints=web
-      - traefik.http.routers.web.middlewares=redirect-to-https
+       # HTTPS Router
+      - "traefik.http.routers.web-secure-${PROJECT_NAME}.rule=Host(`${BACKEND_DOMAIN}`) || Host(`www.${BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.web-secure-${PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.web-secure-${PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.web-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
+      - "traefik.http.routers.web-secure-${PROJECT_NAME}.middlewares=security-headers,rate-limit-${PROJECT_NAME},redirect-to-nonwww"
 
-      # HTTPS router
-      - traefik.http.routers.web-secure.rule=Host(`${DOMAIN}`) || Host(`www.${DOMAIN}`)
-      - traefik.http.routers.web-secure.entrypoints=websecure
-      - traefik.http.routers.web-secure.tls=true
-      - traefik.http.routers.web-secure.tls.certresolver=myresolver
-      - traefik.http.routers.web-secure.middlewares=security-headers,rate-limit,redirect-to-nonwww
+      # Service Def
+      - "traefik.http.services.web-${PROJECT_NAME}.loadbalancer.server.port=8000"
+      - "traefik.http.services.web-${PROJECT_NAME}.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.web-${PROJECT_NAME}.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.services.web-${PROJECT_NAME}.loadbalancer.healthcheck.timeout=3s"
 
-      # Service port
-      - traefik.http.services.web.loadbalancer.server.port=8000
-
-      # Traefik service healthcheck (so Traefik stops routing to unhealthy instances)
-      - traefik.http.services.web.loadbalancer.healthcheck.path=/health
-      - traefik.http.services.web.loadbalancer.healthcheck.interval=10s
-      - traefik.http.services.web.loadbalancer.healthcheck.timeout=3s
-
-      # Rate limiting middleware
-      - traefik.http.middlewares.rate-limit.ratelimit.average=20
-      - traefik.http.middlewares.rate-limit.ratelimit.burst=10
-
-      # Apply rate limiting per client IP
-      - traefik.http.middlewares.rate-limit.ratelimit.sourcecriterion.ipstrategy.depth=2
+      # Rate Limit Middleware (Scoped to this project)
+      - "traefik.http.middlewares.rate-limit-${PROJECT_NAME}.ratelimit.average=20"
+      - "traefik.http.middlewares.rate-limit-${PROJECT_NAME}.ratelimit.burst=10"
+      - "traefik.http.middlewares.rate-limit-${PROJECT_NAME}.ratelimit.sourcecriterion.ipstrategy.depth=2"
 
     networks:
       - backend
-      - traefik
+      - traefik_public
+
+  frontend:
+    image: sohail342/fyp_frontend:latest
+    pull_policy: always
+    restart: unless-stopped
+    depends_on:
+      - web
+    networks:
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
+      - "traefik.http.services.frontend-service-${PROJECT_NAME}.loadbalancer.server.port=80"
 
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     env_file:
       - .env.prod
     environment:
@@ -149,59 +160,6 @@ services:
     networks:
       - backend
 
-  traefik:
-    image: traefik:latest
-    command:
-      - "--log.level=DEBUG"
-      - "--providers.docker=true"
-      - "--entrypoints.web.address=:80"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=traefik"
-      - "--entrypoints.websecure.address=:443"
-
-      # Let's Encrypt TLS Challenge
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.caserver=https://acme-v02.api.letsencrypt.org/directory"
-      - "--certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-
-      # Traefik Dashboard
-      - "--api.dashboard=true"
-      - "--api.insecure=false"
-
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./letsencrypt:/letsencrypt"
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=true"
-      # Dashboard routers
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=auth"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=myresolver"
-
-      # Dashboard middleware
-      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}"
-
-      # Redirect www to non-www
-      - "traefik.http.middlewares.redirect-to-nonwww.redirectregex.regex=^https://www\\.${DOMAIN}/(.*)"
-      - "traefik.http.middlewares.redirect-to-nonwww.redirectregex.replacement=https://${DOMAIN}/$1"
-
-      # Global middlewares (defined on traefik container to ensure availability)
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
-      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
-      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
-    networks:
-      - traefik
-
 volumes:
   postgres_data:
     driver: local
@@ -209,11 +167,9 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  letsencrypt:
-    driver: local
 
 networks:
   backend:
     driver: bridge
-  traefik:
+  traefik_public:
     external: true

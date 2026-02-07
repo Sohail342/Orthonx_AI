@@ -1,13 +1,16 @@
 """Celery tasks for background email processing via SMTP."""
 
-from celery import shared_task
-
 from app.core.config import settings
+from app.utils.logging_utils import get_logger
 from app.utils.mail_config import send_smtp_email
+from app.workers.celery_app import celery_app
+
+logger = get_logger(__name__)
 
 
-@shared_task
-def send_verification_request(email: str, name: str, token: str) -> None:
+@celery_app.task(name="app.workers.tasks.send_verification_request", bind=True)
+def send_verification_request(self, email: str, name: str, token: str) -> None:
+    logger.info(f"Starting send_verification_request task for {email}")
     verify_url = (
         f"https://{settings.DOMAIN}/custom/auth/verify/email?token={token}"
         if settings.ENVIRONMENT == "production"
@@ -121,11 +124,20 @@ def send_verification_request(email: str, name: str, token: str) -> None:
     </html>
     """
 
-    send_smtp_email(email, subject, html)
+    try:
+        result = send_smtp_email(email, subject, html)
+        logger.info(f"Verification email sent successfully to {email}: {result}")
+        return result
+    except Exception as e:
+        logger.error(
+            f"Failed to send verification email to {email}: {e}", exc_info=True
+        )
+        raise
 
 
-@shared_task
-def send_password_reset_email(email: str, name: str, token: str) -> None:
+@celery_app.task(name="app.workers.tasks.send_password_reset_email", bind=True)
+def send_password_reset_email(self, email: str, name: str, token: str) -> None:
+    logger.info(f"Starting send_password_reset_email task for {email}")
     reset_url = (
         f"https://{settings.DOMAIN}/custom/auth/reset-password?token={token}"
         if settings.ENVIRONMENT == "production"
@@ -241,4 +253,12 @@ def send_password_reset_email(email: str, name: str, token: str) -> None:
     </html>
     """
 
-    send_smtp_email(email, subject, html)
+    try:
+        result = send_smtp_email(email, subject, html)
+        logger.info(f"Password reset email sent successfully to {email}: {result}")
+        return result
+    except Exception as e:
+        logger.error(
+            f"Failed to send password reset email to {email}: {e}", exc_info=True
+        )
+        raise

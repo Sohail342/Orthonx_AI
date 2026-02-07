@@ -35,7 +35,7 @@ def load_yolo_onnx() -> YOLO:
 
         MODEL = YOLO("app/ml_models/final_bone_model.onnx", task="detect")
 
-        # Warm-up (Highly Recommended for ONNX)
+        # Warm-up
         logger.info("Warming up model...")
         dummy_img = np.zeros((1024, 1024, 3), dtype=np.uint8)
         MODEL(dummy_img, imgsz=1024, device="cpu")

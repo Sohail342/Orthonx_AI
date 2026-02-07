@@ -1,3 +1,6 @@
+from uuid import uuid4
+
+from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,6 +9,8 @@ from app.database.session import get_db
 from app.models.users import User
 from app.services.user_services import UserServices
 from app.services.yolo_with_gradcam import yolo_grad_cam
+from app.workers.celery_app import celery_app
+from app.workers.yolo_tasks import detect_task
 
 router = APIRouter()
 
@@ -16,8 +21,31 @@ async def detect(
     user: User = Depends(current_active_verified_user),
     file: UploadFile = File(...),
 ) -> dict:
-    """Dectect Fracture with Yolo"""
-    return await yolo_grad_cam.detect(db=db, user=user, file=file)
+    """Dectect Fracture with Yolo in background task"""
+    image_bytes = await file.read()
+    tast_result = detect_task.delay(image_bytes, user.id, f"detection_{uuid4()}")
+    return {
+        "message": "Detection task has been started in the background.",
+        "task_id": tast_result.id,
+    }
+
+
+@router.get("/status/{task_id}")
+async def task_status(
+    task_id: str, user: User = Depends(current_active_verified_user)
+) -> dict:
+    """Check the status of a Celery task."""
+    result = AsyncResult(task_id, app=celery_app)
+
+    response = {
+        "task_id": task_id,
+        "status": result.status,
+    }
+
+    if result.ready():
+        response["result"] = result.result
+
+    return response
 
 
 @router.post("/detect/unauthenticated")

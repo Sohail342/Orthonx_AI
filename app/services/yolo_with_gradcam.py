@@ -47,7 +47,6 @@ class YOLOGradCam:
             image_rgb = np.array(image)
             image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
-            # DEBUG: Log image stats
             logger.info(f"Processing image: size={image.size}, mode={image.mode}")
 
             # Upload original uploaded image to Cloudinary
