@@ -1,10 +1,11 @@
 """Custom Authentication Endpoints with HTML Responses"""
 
 from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi_users.manager import BaseUserManager
 
+from app.core.config import settings
 from app.users.manager import get_user_manager
 
 verify_router = APIRouter()
@@ -21,7 +22,12 @@ async def verify_via_get(
     """Custom Verify Endpoint with GET Method"""
     try:
         await user_manager.verify(token, request)
-        return templates.TemplateResponse("verify_success.html", {"request": request})
+        login_url = (
+            "http://localhost:5173/login?message=Email successfully verified. You can now log in."
+            if settings.ENVIRONMENT == "development"
+            else f"https://{settings.DOMAIN}/login?message=Email successfully verified. You can now log in."
+        )
+        return RedirectResponse(url=login_url, status_code=303)
     except Exception as e:
         return templates.TemplateResponse(
             "verify_failed.html", {"request": request, "detail": str(e)}
@@ -51,7 +57,12 @@ async def reset_password_submit(
     else:
         try:
             await user_manager.reset_password(token, password)
-            message = "Your password has been reset successfully. You can now log in."
+            login_url = (
+                "http://localhost:5173/login?message=Password reset successful. You can now log in with your new password."
+                if settings.ENVIRONMENT == "development"
+                else f"https://{settings.DOMAIN}/login?message=Password reset successful. You can now log in with your new password."
+            )
+            return RedirectResponse(url=login_url, status_code=303)
         except Exception:
             error = (
                 "Invalid or expired token. Please request a new password reset link."
