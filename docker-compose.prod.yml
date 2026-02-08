@@ -119,7 +119,7 @@ services:
     image: ${APP_IMAGE}
     env_file:
       - .env.prod
-    command: celery -A app.workers.celery_app worker --loglevel=INFO --max-tasks-per-child=1000
+    command: celery -A app.workers.celery_app worker -Q default --loglevel=INFO --max-tasks-per-child=1000
     depends_on:
       db:
         condition: service_healthy
