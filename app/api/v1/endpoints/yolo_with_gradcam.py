@@ -22,6 +22,20 @@ async def detect(
     file: UploadFile = File(...),
 ) -> dict:
     """Dectect Fracture with Yolo in background task"""
+    from fastapi import HTTPException
+
+    from app.services.credit_service import CreditService
+
+    await CreditService.check_and_reset_monthly_credits(user, db)
+    cost = await CreditService.get_config_value(db, "UPLOAD_IMAGE_COST")
+    if user.credits < cost:
+        raise HTTPException(
+            status_code=402, detail=f"Insufficient credits. Required: {cost}"
+        )
+    user.credits -= cost
+    db.add(user)
+    await db.commit()
+
     image_bytes = await file.read()
     tast_result = detect_task.delay(image_bytes, user.id, f"detection_{uuid4()}")
     return {

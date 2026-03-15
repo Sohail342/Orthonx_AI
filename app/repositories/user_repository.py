@@ -4,7 +4,8 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.users import DiagnosisRecord, User
+from app.models.diagnosis import DiagnosisRecord
+from app.models.users import User
 
 
 class UserRepository:

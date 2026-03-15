@@ -15,17 +15,17 @@ PAKISTAN_MOBILE_REGEX = re.compile(r"^(?:\+92|0)3[0-9]{9}$")
 
 class UserType(str, Enum):
     USER = "user"
-    HOSPITAL = "hospital"
     DOCTOR = "doctor"
 
 
 class UserRead(schemas.BaseUser[uuid.UUID]):
     """User Read Schema"""
 
-    email: Optional[str] = None
     user_type: UserType = UserType.USER
     name: Optional[str] = None
     phone_number: Optional[str] = None
+    credits: int
+    last_credit_reset_date: datetime.datetime
 
     @field_validator("phone_number")
     def validate_phone_number(cls: Type["UserRead"], v: Optional[str]) -> Optional[str]:
@@ -58,7 +58,7 @@ class UserCreate(schemas.BaseUserCreate):
         UserType,
         Field(
             ...,
-            description="User type (e.g user, doctor, or hospital)",
+            description="User type (e.g user, or doctor)",
         ),
     ] = UserType.USER
     name: Optional[str] = None
@@ -122,6 +122,19 @@ class UserUpdate(schemas.BaseUserUpdate):
 
     name: Optional[str] = None
     phone_number: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_superuser: Optional[bool] = None
+    is_verified: Optional[bool] = None
+
+    @field_validator("phone_number")
+    def validate_phone_number(
+        cls: Type["UserUpdate"], v: Optional[str]
+    ) -> Optional[str]:
+        if v and not PAKISTAN_MOBILE_REGEX.match(v):
+            raise ValueError(
+                "Invalid Pakistani mobile number. Use format 030XXXXXXXX or +9230XXXXXXXX"
+            )
+        return v
 
 
 class UserDiagnosisHistoryRequest(schemas.BaseModel):
@@ -137,6 +150,26 @@ class UserDiagnosisHistoryRequest(schemas.BaseModel):
     gradcam_image_url: str
     report_url: str = ""
     diagnosis_data: dict
+    review_status: str | None = "none"
+    reviewer_id: Optional[uuid.UUID] = None
+    review_notes: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class ReviewSubmitRequest(schemas.BaseModel):
+    review_notes: str
+
+
+class SystemConfigUpdate(schemas.BaseModel):
+    default_credits: int
+    upload_image_cost: int
+    request_review_cost: int
+    doctor_review_earning: int
+    appointment_booking_cost: int
+    appointment_completion_earning: int
+
+
+class UserCreditUpdate(schemas.BaseModel):
+    credits: int

@@ -2,7 +2,14 @@
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import prediction, yolo_with_gradcam
+from app.api.v1.endpoints import (
+    appointments,
+    dashboard,
+    prediction,
+    reviews,
+    verification,
+    yolo_with_gradcam,
+)
 from app.core.security import auth_backend
 from app.core.users import fastapi_users
 from app.schemas.user import UserCreate, UserRead, UserUpdate
@@ -43,4 +50,14 @@ api_v1_router.include_router(
 )
 api_v1_router.include_router(
     yolo_with_gradcam.router, prefix="/yolo/detection", tags=["Yolo Gradcam"]
+)
+api_v1_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
+api_v1_router.include_router(
+    reviews.router, prefix="/prediction", tags=["prediction_reviews"]
+)
+api_v1_router.include_router(
+    verification.router, prefix="/verification", tags=["verification"]
+)
+api_v1_router.include_router(
+    appointments.router, prefix="/appointments", tags=["appointments"]
 )

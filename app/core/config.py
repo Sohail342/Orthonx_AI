@@ -53,11 +53,8 @@ class Settings(BaseSettings):
                 else "postgresql://postgres:postgres@db:5432/fyp_backend"
             )
 
-    SMTP_PORT: Optional[int] = None
-    SMTP_HOST: Optional[str] = None
-    SMTP_USER: Optional[str] = None
-    SMTP_PASSWORD: Optional[str] = None
-    EMAILS_FROM: Optional[str] = "fyp_backend@gmail.com"
+    # Email configuration
+    RESEND_API_KEY: Optional[str] = None
 
     # Redis / Celery
     REDIS_URL: str = "redis://redis:6379"

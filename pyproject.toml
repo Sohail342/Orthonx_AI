@@ -24,7 +24,7 @@ dependencies = [
     "gunicorn>=21.2,<22.0",
     "onnxruntime>=1.23.2",
     "matplotlib>=3.10.7",
-    "opencv-python>=4.11.0",
+    "opencv-python-headless>=4.13.0.92",
     "numpy>=1.24.3",
     "transformers>=4.55.4",
     "optimum>=2.0.0",
@@ -32,6 +32,7 @@ dependencies = [
     "huggingface_hub",
     "ultralytics",
     "cloudinary>=1.44.1",
+    "resend>=2.23.0",
 ]
 
 [dependency-groups]

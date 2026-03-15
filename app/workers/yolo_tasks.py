@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from app.models.users import DiagnosisRecord
+from app.models.diagnosis import DiagnosisRecord
 from app.utils.cloudinary_utils import CloudinaryUtils
 from app.utils.load_yolo import load_yolo_model
 from app.utils.logging_utils import get_logger

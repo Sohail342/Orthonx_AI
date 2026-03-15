@@ -1,6 +1,6 @@
 from typing import AsyncGenerator, Optional, cast
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users import BaseUserManager, UUIDIDMixin
 from fastapi_users.exceptions import UserNotExists
@@ -28,6 +28,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, str]):
     def __init__(self, user_db: SQLAlchemyUserDatabase, db: AsyncSession) -> None:
         super().__init__(user_db)
         self.db = db
+
+    async def on_after_login(
+        self,
+        user: User,
+        request: Optional[Request] = None,
+        response: Optional[Response] = None,
+    ) -> None:
+        from app.services.credit_service import CreditService
+
+        await CreditService.check_and_reset_monthly_credits(user, self.db)
+        logger.info(f"User {user.id} logged in. Credits lazily synced.")
 
     async def on_after_request_verify(
         self, user: User, token: str, request: Optional[Request] = None

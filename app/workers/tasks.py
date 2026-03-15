@@ -2,10 +2,12 @@
 
 from app.core.config import settings
 from app.utils.logging_utils import get_logger
-from app.utils.mail_config import send_smtp_email
+from app.utils.mail_config import EmailConfig
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
+
+email_config = EmailConfig(resend_api_key=settings.RESEND_API_KEY)
 
 
 @celery_app.task(name="app.workers.tasks.send_verification_request", bind=True)
@@ -121,7 +123,9 @@ def send_verification_request(self, email: str, name: str, token: str) -> None:
         """
 
     try:
-        result = send_smtp_email(email, subject, html_content)
+        result = email_config.send_mail(
+            html_content=html_content, to_email=email, subject=subject
+        )
         logger.info(f"Verification email sent successfully to {email}: {result}")
         return result
     except Exception as e:
@@ -249,7 +253,9 @@ def send_password_reset_email(self, email: str, name: str, token: str) -> None:
         """
 
     try:
-        result = send_smtp_email(email, subject, html)
+        result = email_config.send_mail(
+            html_content=html, to_email=email, subject=subject
+        )
         logger.info(f"Password reset email sent successfully to {email}: {result}")
         return result
     except Exception as e:

@@ -43,7 +43,7 @@ venv.bak/
 Thumbs.db
 
 # Ignore large ML models
-app/ml_models/*.keras
+app/ml_models/
 
 # Database
 *.db

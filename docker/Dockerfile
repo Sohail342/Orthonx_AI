@@ -22,7 +22,7 @@ COPY pyproject.toml ./
 # Install Torch and Torchvision together from the CPU index
 RUN uv pip install --system --no-cache \
     --index-url https://download.pytorch.org/whl/cpu \
-    torch torchvision torchaudio
+    torch torchvision
 
 # Install remaining project dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -56,13 +56,16 @@ COPY ./alembic.ini ./
 COPY ./alembic ./alembic
 COPY docker/docker-entrypoint.sh /usr/local/bin/
 
-ARG HF_API_KEY
-ENV HF_API_KEY=${HF_API_KEY}
-
 #  Download models from huggingface
 RUN mkdir -p /app/ml_models/bone_fracture_detection \
     && mkdir -p /app/ml_models/bone_fracture_model_onnx \
     && python -c "import app.utils.load_models"
+
+# Clean up Hugging Face cache to reduce image size
+RUN python -c "import app.utils.load_models" && \
+    rm -rf /app/hfcache/hub/tmp* && \
+    find /app/hfcache -name "*.ckpt" -delete
+
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
     && chown -R appuser:appuser /app
