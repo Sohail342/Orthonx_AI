@@ -44,7 +44,7 @@ async def get_doctor_stats(
 ):
     from sqlalchemy import func, select
 
-    from app.models.users import DiagnosisRecord
+    from app.models.diagnosis import DiagnosisRecord
 
     # Total AI detections by this doctor
     total_detections_result = await db.execute(

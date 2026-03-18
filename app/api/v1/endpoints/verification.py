@@ -135,9 +135,6 @@ async def review_verification(
     db: AsyncSession = Depends(get_db),
 ):
     """Approve or reject a doctor verification request."""
-    # The validation is now implicitly handled by the Pydantic/Enum integration if we updated the schema,
-    # but since VerificationReview uses 'str', we check manually or update the schema.
-    # Let's update the manual check for now to use the Enum values.
     try:
         new_status = VerificationStatus(data.status)
     except ValueError:
