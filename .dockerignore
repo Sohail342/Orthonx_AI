@@ -42,9 +42,6 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
-# Ignore large ML models
-app/ml_models/
-
 # Database
 *.db
 *.sqlite
@@ -59,12 +56,6 @@ logs/
 htmlcov/
 .pytest_cache/
 .tox/
-
-# Ml moldels
-app/ml_models/*.onnx
-# ml models
-*.onnx
-*.onnx.data
 
 # Environment files
 .env.local
