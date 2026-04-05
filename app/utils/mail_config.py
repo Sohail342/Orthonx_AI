@@ -4,12 +4,14 @@ from typing import Dict
 
 import resend
 
+from app.core.config import settings
+
 
 class EmailConfig:
     def __init__(
         self,
         resend_api_key: str,
-        from_email: str = "Orthonx <support@help.orthonx.app>",
+        from_email: str = f"Orthonx <support@{settings.DOMAIN_NAME}>",
     ):
         resend.api_key = resend_api_key
         self.FROM_EMAIL: str = from_email
