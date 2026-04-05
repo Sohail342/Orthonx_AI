@@ -48,6 +48,8 @@ services:
     volumes:
       - ./app:/app/app  # Mount source for live reload
     command: celery -A app.workers.celery_app worker -Q default --loglevel=INFO
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - db
       - redis

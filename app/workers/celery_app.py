@@ -3,6 +3,7 @@
 from celery import Celery
 from celery.signals import task_failure, task_prerun, task_success
 
+import app.database.base  # noqa
 from app.core.config import settings
 from app.utils.logging_utils import get_logger
 
@@ -12,7 +13,7 @@ celery_app = Celery(
     "fyp_backend",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=["app.workers.tasks", "app.workers.yolo_tasks"],
+    include=["app.workers.tasks", "app.workers.yolo_tasks", "app.workers.report_tasks"],
 )
 
 # Configure Celery
@@ -35,6 +36,7 @@ celery_app.conf.task_routes = {
     "app.workers.tasks.send_verification_request": {"queue": "default"},
     "app.workers.tasks.send_password_reset_email": {"queue": "default"},
     "app.workers.yolo_tasks.detect_task": {"queue": "default"},
+    "app.workers.report_tasks.generate_report_task": {"queue": "default"},
 }
 
 

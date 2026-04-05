@@ -30,14 +30,18 @@ async def verify_via_get(
         return RedirectResponse(url=login_url, status_code=303)
     except Exception as e:
         return templates.TemplateResponse(
-            "verify_failed.html", {"request": request, "detail": str(e)}
+            request=request,
+            name="verify_failed.html",
+            context={"request": request, "detail": str(e)},
         )
 
 
 @verify_router.get("/auth/reset-password", response_class=HTMLResponse)
 async def reset_password_form(request: Request, token: str) -> HTMLResponse:
     return templates.TemplateResponse(
-        "reset_password.html", {"request": request, "token": token}
+        request=request,
+        name="reset_password.html",
+        context={"request": request, "token": token},
     )
 
 
@@ -69,8 +73,9 @@ async def reset_password_submit(
             )
 
     return templates.TemplateResponse(
-        "reset_password.html",
-        {
+        request=request,
+        name="reset_password.html",
+        context={
             "request": request,
             "token": token,
             "message": message,

@@ -19,8 +19,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
-    # Facebook OAuth
-    FACEBOOK_CLIENT_ID: str = "FACEBOOK_CLIENT_ID"
+    # llama Inference
+    OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
+    OLLAMA_MODEL: str = "llama3.2:3b"
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod

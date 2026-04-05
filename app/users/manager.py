@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator, Optional, cast
 
 from fastapi import Depends, HTTPException, Request, Response, status
@@ -119,3 +120,15 @@ async def get_user_manager(
     db: AsyncSession = Depends(get_db),
 ) -> AsyncGenerator[UserManager, None]:
     yield UserManager(user_db, db)
+
+
+@asynccontextmanager
+async def get_user_manager_context() -> AsyncGenerator[UserManager, None]:
+    """Context manager for UserManager to use in non-request contexts like WebSockets."""
+    from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
+
+    from app.database.session import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as db:
+        user_db = SQLAlchemyUserDatabase(db, User)
+        yield UserManager(user_db, db)

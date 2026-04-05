@@ -107,7 +107,7 @@ def detect_task(
         )
 
         # YOLO inference
-        results = MODEL(image, conf=0.01, imgsz=1024)
+        results = MODEL(image, conf=0.10, imgsz=1024)
 
         # Plot result
         results_plotted = np.ascontiguousarray(
@@ -162,7 +162,7 @@ def detect_task(
             )
 
         if user_id:
-            create_diagnosis_record(
+            record = create_diagnosis_record(
                 db,
                 user_id=user_id,
                 diagnosis_data={"detections": detections},
@@ -174,6 +174,12 @@ def detect_task(
                 report_url="",
             )
             db.commit()
+
+            # Chain PDF report generation in the background
+            from app.workers.report_tasks import generate_report_task
+
+            generate_report_task.delay(record.id)
+            logger.info(f"Chained report generation task for record {record.id}")
 
         return {
             "detection_id": detection_id,

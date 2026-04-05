@@ -67,3 +67,25 @@ class CloudinaryUtils:
             return response  # type: ignore
         except Exception as e:
             raise RuntimeError(f"Failed to delete image from Cloudinary: {e}")
+
+    @staticmethod
+    def upload_pdf_to_cloudinary(
+        file_bytes: bytes, public_id: str, format: str = "pdf"
+    ) -> tuple[str, str]:
+        """Upload PDF bytes to Cloudinary and return secure_url.
+
+        Cloudinary requires resource_type='raw' for non-image files.
+        The format parameter ensures the URL ends with .pdf for proper browser handling.
+        """
+        try:
+            file_like = io.BytesIO(file_bytes)
+            result = cloudinary.uploader.upload(
+                file_like,
+                public_id=public_id,
+                overwrite=True,
+                resource_type="raw",
+                format=format,
+            )
+            return result["secure_url"], result["public_id"]
+        except Exception as e:
+            raise RuntimeError(f"Cloudinary PDF upload failed: {e}")

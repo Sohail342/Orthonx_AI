@@ -1,7 +1,8 @@
 from uuid import uuid4
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from redis import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.users import current_active_verified_user
@@ -9,6 +10,7 @@ from app.database.session import get_db
 from app.models.users import User
 from app.services.user_services import UserServices
 from app.services.yolo_with_gradcam import yolo_grad_cam
+from app.utils.rate_limiter import check_rate_limit, get_redis_client
 from app.workers.celery_app import celery_app
 from app.workers.yolo_tasks import detect_task
 
@@ -22,8 +24,6 @@ async def detect(
     file: UploadFile = File(...),
 ) -> dict:
     """Dectect Fracture with Yolo in background task"""
-    from fastapi import HTTPException
-
     from app.services.credit_service import CreditService
 
     await CreditService.check_and_reset_monthly_credits(user, db)
@@ -64,10 +64,22 @@ async def task_status(
 
 @router.post("/detect/unauthenticated")
 async def detect_unauthenticated(
+    request: Request,
     db: AsyncSession = Depends(get_db),
+    redis: Redis = Depends(get_redis_client),
     file: UploadFile = File(...),
 ) -> dict:
-    """Dectect Fracture with Yolo"""
+    """Dectect Fracture with Yolo (Rate limited for Guests)"""
+    ip_address = request.client.host if request.client else "unknown"
+
+    # Rate Limiting (10/hr)
+    is_allowed, _ = check_rate_limit(redis, ip_address, limit_type="detect", limit=10)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Guest limit exceeded. Please get started for free to continue using our AI analysis.",
+        )
+
     return await yolo_grad_cam.detect(db=db, file=file)
 
 
@@ -76,7 +88,7 @@ async def get_detection_history(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(current_active_verified_user),
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    page_size: int = Query(10, ge=1, le=500),
 ) -> dict:
     """
     Get paginated detection history for the current user
