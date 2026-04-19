@@ -3,7 +3,7 @@
 import secrets
 from typing import Any, List, Optional, Union
 
-from pydantic import AnyHttpUrl, field_validator
+from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
 
 
@@ -19,11 +19,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
-    # llama Inference
-    OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
-    OLLAMA_MODEL: str = "llama3.2:3b"
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
         if isinstance(v, str) and not v.startswith("["):
@@ -61,6 +58,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379"
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://redis:6379/1"
+
+    OLLAMA_BASE_URL: str = "http://domain.com:11434"
+    OLLAMA_MODEL: str = "model:latest"
 
     # Cloudinary
     CLOUDINARY_CLOUD_NAME: Optional[str] = None

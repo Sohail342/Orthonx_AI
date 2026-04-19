@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     appointments,
-    chat,
+    contact,
     dashboard,
     prediction,
     reviews,
@@ -62,4 +62,4 @@ api_v1_router.include_router(
 api_v1_router.include_router(
     appointments.router, prefix="/appointments", tags=["appointments"]
 )
-api_v1_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_v1_router.include_router(contact.router, prefix="/contact", tags=["contact"])

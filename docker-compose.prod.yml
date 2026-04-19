@@ -1,6 +1,8 @@
 services:
   web:
     image: ${APP_IMAGE}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .env.prod
     depends_on:
@@ -61,6 +63,9 @@ services:
       - web
     networks:
       - traefik_public
+    environment:
+      - VITE_API_URL=https://${BACKEND_DOMAIN}
+      - VITE_AI_URL=https://${AI_BACKEND_DOMAIN}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.rule=Host(`${DOMAIN}`)"
@@ -68,6 +73,29 @@ services:
       - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.tls=true"
       - "traefik.http.routers.frontend-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
       - "traefik.http.services.frontend-service-${PROJECT_NAME}.loadbalancer.server.port=80"
+
+  ai-assistant:
+    image: ${AI_ASSISTANT_IMAGE}
+    env_file:
+      - .env.prod
+    volumes:
+      - ai_knowledge:/app/app/knowledge
+      - ai_chroma_data:/app/chroma_db
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai-${PROJECT_NAME}.rule=Host(`${AI_BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.ai-${PROJECT_NAME}.entrypoints=web"
+      - "traefik.http.routers.ai-${PROJECT_NAME}.middlewares=redirect-to-https"
+
+      - "traefik.http.routers.ai-secure-${PROJECT_NAME}.rule=Host(`${AI_BACKEND_DOMAIN}`)"
+      - "traefik.http.routers.ai-secure-${PROJECT_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.ai-secure-${PROJECT_NAME}.tls=true"
+      - "traefik.http.routers.ai-secure-${PROJECT_NAME}.tls.certresolver=myresolver"
+      - "traefik.http.services.ai-service-${PROJECT_NAME}.loadbalancer.server.port=8001"
+    networks:
+      - backend
+      - traefik_public
 
   db:
     image: postgres:17-alpine
@@ -116,6 +144,8 @@ services:
 
   celery:
     entrypoint: ""
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     image: ${APP_IMAGE}
     env_file:
       - .env.prod
@@ -166,6 +196,10 @@ volumes:
   postgres_backups:
     driver: local
   redis_data:
+    driver: local
+  ai_knowledge:
+    driver: local
+  ai_chroma_data:
     driver: local
 
 networks:
