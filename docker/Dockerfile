@@ -56,11 +56,6 @@ COPY ./alembic.ini ./
 COPY ./alembic ./alembic
 COPY docker/docker-entrypoint.sh /usr/local/bin/
 
-# Clean up Hugging Face cache to reduce image size
-RUN python -c "import app.utils.load_models" && \
-    rm -rf /app/hfcache/hub/tmp* && \
-    find /app/hfcache -name "*.ckpt" -delete
-
 
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
     && chown -R appuser:appuser /app
