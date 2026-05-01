@@ -6,7 +6,6 @@ from app.api.v1.endpoints import (
     appointments,
     contact,
     dashboard,
-    prediction,
     reviews,
     verification,
     yolo_with_gradcam,
@@ -46,9 +45,6 @@ api_v1_router.include_router(
 )
 
 # Custom routers
-api_v1_router.include_router(
-    prediction.router, prefix="/prediction", tags=["prediction"]
-)
 api_v1_router.include_router(
     yolo_with_gradcam.router, prefix="/yolo/detection", tags=["Yolo Gradcam"]
 )

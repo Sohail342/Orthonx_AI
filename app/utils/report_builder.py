@@ -191,7 +191,10 @@ def _build_header(styles: dict, record_data: dict) -> list:
     logo_cell = ""
     if os.path.exists(LOGO_PATH):
         try:
-            logo_cell = Image(LOGO_PATH, width=5 * cm, height=1.6 * cm)
+            # Precisely fit logo height to text line height balance
+            logo_cell = Image(
+                LOGO_PATH, width=4.5 * cm, height=1.4 * cm, kind="proportional"
+            )
             logo_cell.hAlign = "LEFT"
         except Exception:
             logo_cell = Paragraph(
@@ -205,24 +208,27 @@ def _build_header(styles: dict, record_data: dict) -> list:
         )
 
     report_date = datetime.now().strftime("%B %d, %Y  •  %I:%M %p")
-    pub_id = str(record_data.get("public_id", "N/A"))[:30]
+    pub_id = str(record_data.get("public_id", "N/A"))[:40]
 
     right_info = Paragraph(
-        f'<font size="8" color="#9CA3AF">REPORT DATE</font><br/>'
+        f'<font size="7" color="#9CA3AF"><b>REPORT GENERATED</b></font><br/>'
         f'<font size="10" color="#15173D"><b>{report_date}</b></font><br/>'
-        f'<font size="7" color="#9CA3AF">REF: {pub_id}</font>',
+        f'<font size="7" color="#9CA3AF">REFERENCE: {pub_id}</font>',
         styles["right_aligned"],
     )
 
     header_table = Table(
         [[logo_cell, right_info]],
-        colWidths=[10 * cm, 7 * cm],
+        colWidths=[10.5 * cm, 6.5 * cm],
     )
     header_table.setStyle(
         TableStyle(
             [
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("ALIGN", (1, 0), (1, 0), "RIGHT"),
+                ("LEFTPADDING", (0, 0), (0, 0), 0),
+                ("RIGHTPADDING", (1, 0), (1, 0), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
             ]
         )
     )
@@ -231,10 +237,10 @@ def _build_header(styles: dict, record_data: dict) -> list:
 
     # Primary color accent bar
     elements.append(
-        HRFlowable(width="100%", thickness=3, color=BRAND_PRIMARY, spaceAfter=2 * mm)
+        HRFlowable(width="100%", thickness=2.5, color=BRAND_PRIMARY, spaceAfter=1 * mm)
     )
     elements.append(
-        HRFlowable(width="100%", thickness=0.5, color=BRAND_BORDER, spaceAfter=6 * mm)
+        HRFlowable(width="100%", thickness=0.5, color=BRAND_BORDER, spaceAfter=8 * mm)
     )
 
     return elements
@@ -258,27 +264,20 @@ def _build_patient_info(styles: dict, record_data: dict, user_data: dict) -> lis
     """Build the patient information card."""
     elements = []
 
-    # Section heading with accent line
-    heading_table = Table(
-        [
-            [
-                Paragraph(
-                    '<font color="#00B4D8">▎</font> Patient Information',
-                    styles["section_heading"],
-                )
-            ]
-        ],
-        colWidths=[CONTENT_WIDTH],
-    )
-    heading_table.setStyle(
-        TableStyle(
-            [
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]
+    # Modern section heading
+    elements.append(
+        Paragraph(
+            "<b>PATIENT INFORMATION</b>",
+            ParagraphStyle(
+                "InfoHeading",
+                fontSize=9,
+                textColor=BRAND_PRIMARY,
+                spaceAfter=3 * mm,
+                fontName="Helvetica-Bold",
+                letterSpacing=1,
+            ),
         )
     )
-    elements.append(heading_table)
 
     # Parse scan date
     scan_date = "N/A"
@@ -291,15 +290,15 @@ def _build_patient_info(styles: dict, record_data: dict, user_data: dict) -> lis
         except Exception:
             scan_date = str(record_data["timestamp"])
 
-    # Two-column info card
+    # Two-column info card with clean borders
     info_data = [
         [
             Paragraph(
-                "<font color='#9CA3AF' size='8'><b>PATIENT NAME</b></font>",
+                "<font color='#9CA3AF' size='7.5'><b>PATIENT FULL NAME</b></font>",
                 styles["label"],
             ),
             Paragraph(
-                "<font color='#9CA3AF' size='8'><b>EMAIL ADDRESS</b></font>",
+                "<font color='#9CA3AF' size='7.5'><b>EMAIL ADDRESS</b></font>",
                 styles["label"],
             ),
         ],
@@ -309,17 +308,19 @@ def _build_patient_info(styles: dict, record_data: dict, user_data: dict) -> lis
         ],
         [
             Paragraph(
-                "<font color='#9CA3AF' size='8'><b>SCAN DATE</b></font>",
+                "<font color='#9CA3AF' size='7.5'><b>SCAN / ANALYSIS DATE</b></font>",
                 styles["label"],
             ),
             Paragraph(
-                "<font color='#9CA3AF' size='8'><b>RECORD ID</b></font>",
+                "<font color='#9CA3AF' size='7.5'><b>SYSTEM RECORD ID</b></font>",
                 styles["label"],
             ),
         ],
         [
             Paragraph(scan_date, styles["value"]),
-            Paragraph(str(record_data.get("id", "N/A")), styles["value"]),
+            Paragraph(
+                f"<code>#{str(record_data.get('id', 'N/A'))}</code>", styles["value"]
+            ),
         ],
     ]
 
@@ -328,17 +329,18 @@ def _build_patient_info(styles: dict, record_data: dict, user_data: dict) -> lis
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), BRAND_SURFACE),
-                ("BOX", (0, 0), (-1, -1), 0.75, BRAND_BORDER),
-                ("LINEBELOW", (0, 1), (-1, 1), 0.25, BRAND_BORDER),
-                ("TOPPADDING", (0, 0), (-1, -1), 8),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
-                ("LEFTPADDING", (0, 0), (-1, -1), 14),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("BOX", (0, 0), (-1, -1), 0.5, BRAND_BORDER),
+                ("LINEBELOW", (0, 1), (-1, 1), 0.1, BRAND_BORDER),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("LEFTPADDING", (0, 0), (-1, -1), 15),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 15),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ]
         )
     )
     elements.append(info_table)
+    elements.append(Spacer(1, 8 * mm))
     return elements
 
 
@@ -346,30 +348,23 @@ def _build_ai_summary(styles: dict, ai_summary: str) -> list:
     """Build the AI clinical summary section."""
     elements = []
 
-    heading_table = Table(
-        [
-            [
-                Paragraph(
-                    '<font color="#00B4D8">▎</font> AI Clinical Summary',
-                    styles["section_heading"],
-                )
-            ]
-        ],
-        colWidths=[CONTENT_WIDTH],
-    )
-    heading_table.setStyle(
-        TableStyle(
-            [
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]
+    elements.append(
+        Paragraph(
+            "<b>AI CLINICAL SUMMARY</b>",
+            ParagraphStyle(
+                "InfoHeading",
+                fontSize=9,
+                textColor=BRAND_PRIMARY,
+                spaceAfter=1 * mm,
+                fontName="Helvetica-Bold",
+                letterSpacing=1,
+            ),
         )
     )
-    elements.append(heading_table)
 
     elements.append(
         Paragraph(
-            "Generated by Llama 3.2 (3B) via Ollama   •   Clinical AI Analysis",
+            "Powered by Llama 3.2 Medical AI",
             styles["tag"],
         )
     )
@@ -377,22 +372,23 @@ def _build_ai_summary(styles: dict, ai_summary: str) -> list:
     # Summary in a bordered card with left accent
     summary_content = Table(
         [[Paragraph(ai_summary, styles["body"])]],
-        colWidths=[CONTENT_WIDTH - 6 * mm],
+        colWidths=[CONTENT_WIDTH],
     )
     summary_content.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, -1), BRAND_SURFACE),
                 ("BOX", (0, 0), (-1, -1), 0.5, BRAND_BORDER),
-                ("LINEBEFORE", (0, 0), (0, -1), 3, BRAND_PRIMARY),
-                ("TOPPADDING", (0, 0), (-1, -1), 14),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+                ("LINEBEFORE", (0, 0), (0, -1), 2.5, BRAND_PRIMARY),
+                ("TOPPADDING", (0, 0), (-1, -1), 12),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
                 ("LEFTPADDING", (0, 0), (-1, -1), 16),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 16),
             ]
         )
     )
     elements.append(summary_content)
+    elements.append(Spacer(1, 8 * mm))
     return elements
 
 
@@ -401,26 +397,19 @@ def _build_detection_table(styles: dict, record_data: dict) -> list:
     elements = []
     detections = record_data.get("diagnosis_data", {}).get("detections", [])
 
-    heading_table = Table(
-        [
-            [
-                Paragraph(
-                    '<font color="#00B4D8">▎</font> Detection Results',
-                    styles["section_heading"],
-                )
-            ]
-        ],
-        colWidths=[CONTENT_WIDTH],
-    )
-    heading_table.setStyle(
-        TableStyle(
-            [
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]
+    elements.append(
+        Paragraph(
+            "<b>DETECTION RESULTS & FINDINGS</b>",
+            ParagraphStyle(
+                "InfoHeading",
+                fontSize=9,
+                textColor=BRAND_PRIMARY,
+                spaceAfter=4 * mm,
+                fontName="Helvetica-Bold",
+                letterSpacing=1,
+            ),
         )
     )
-    elements.append(heading_table)
 
     if not detections:
         no_result_table = Table(
@@ -548,26 +537,19 @@ def _build_images_section(styles: dict, record_data: dict) -> list:
     """Build the diagnostic images section with embedded images."""
     elements = []
 
-    heading_table = Table(
-        [
-            [
-                Paragraph(
-                    '<font color="#00B4D8">▎</font> Diagnostic Images',
-                    styles["section_heading"],
-                )
-            ]
-        ],
-        colWidths=[CONTENT_WIDTH],
-    )
-    heading_table.setStyle(
-        TableStyle(
-            [
-                ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-            ]
+    elements.append(
+        Paragraph(
+            "<b>DIAGNOSTIC IMAGES & HEATMAPS</b>",
+            ParagraphStyle(
+                "InfoHeading",
+                fontSize=9,
+                textColor=BRAND_PRIMARY,
+                spaceAfter=5 * mm,
+                fontName="Helvetica-Bold",
+                letterSpacing=1,
+            ),
         )
     )
-    elements.append(heading_table)
 
     image_entries = [
         ("Original X-ray", record_data.get("uploaded_image_url")),

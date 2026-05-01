@@ -16,7 +16,7 @@ from app.utils.load_yolo import load_yolo_model
 from app.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
-MODEL = load_yolo_model()
+DETECTOR = load_yolo_model()
 
 
 class YOLOGradCam:
@@ -44,8 +44,7 @@ class YOLOGradCam:
         try:
             contents = await file.read()
             image = Image.open(io.BytesIO(contents)).convert("RGB")
-            image_rgb = np.array(image)
-            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
             logger.info(f"Processing image: size={image.size}, mode={image.mode}")
 
@@ -56,59 +55,30 @@ class YOLOGradCam:
                 )
             )
 
-            # YOLO inference
-            results = MODEL(image, conf=0.01, imgsz=1024)
+            # YOLO inference using the new service
+            result = DETECTOR.predict_bytes(contents)
+            detections = result["detections"]
+            annotated_img = result["annotated_image"]
 
-            logger.info(f"Inference results: {len(results)} results found")
-            logger.info(f"Result 0 boxes: {len(results[0].boxes)}")
+            logger.info(f"Inference complete: {len(detections)} detections found")
 
-            # Plot results
-            results_plotted = results[0].plot()
+            # Convert PIL annotated image to bytes for Cloudinary
+            img_byte_arr = io.BytesIO()
+            annotated_img.save(img_byte_arr, format="JPEG")
+            result_bytes = img_byte_arr.getvalue()
 
-            # Fix for potential type mismatch or crash in imencode
-            if not isinstance(results_plotted, np.ndarray):
-                results_plotted = np.array(results_plotted)
-
-            # Ensure uint8 type and contiguous array (OpenCV requirement)
-            results_plotted = np.ascontiguousarray(results_plotted, dtype=np.uint8)
-
-            _, result_encoded = cv2.imencode(".jpg", results_plotted)
-            result_bytes = result_encoded.tobytes()
             result_url, _ = CloudinaryUtils.upload_bytes_to_cloudinary(
                 result_bytes, public_id=f"detections/{detection_id}_result"
             )
 
-            # Extract detection info
-            detections = []
-            detection_boxes = []
-            for result in results:
-                boxes = result.boxes.cpu().numpy()
-                for i, box in enumerate(boxes):
-                    x1, y1, x2, y2 = box.xyxy[0]
-                    confidence = box.conf[0]
-                    class_id = int(box.cls[0])
-                    class_name = result.names[class_id]
-
-                    detection_boxes.append([int(x1), int(y1), int(x2), int(y2)])
-                    detections.append(
-                        {
-                            "id": i,
-                            "class": class_name,
-                            "confidence": round(float(confidence), 2),
-                            "box": {
-                                "x1": int(x1),
-                                "y1": int(y1),
-                                "x2": int(x2),
-                                "y2": int(y2),
-                            },
-                        }
-                    )
+            # Extract detection boxes for Grad-CAM and Explanation
+            detection_boxes = [d["bbox"] for d in detections]
 
             # Generate explanation image
             if detection_boxes:
                 explanation_img = image_bgr.copy()
                 for box in detection_boxes:
-                    x1, y1, x2, y2 = box
+                    x1, y1, x2, y2 = [int(v) for v in box]
                     cv2.rectangle(explanation_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     highlight = np.zeros_like(explanation_img, dtype=np.uint8)
                     pad = 10

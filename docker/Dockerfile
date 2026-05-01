@@ -56,11 +56,6 @@ COPY ./alembic.ini ./
 COPY ./alembic ./alembic
 COPY docker/docker-entrypoint.sh /usr/local/bin/
 
-#  Download models from huggingface
-RUN mkdir -p /app/ml_models/bone_fracture_detection \
-    && mkdir -p /app/ml_models/bone_fracture_model_onnx \
-    && python -c "import app.utils.load_models"
-
 # Clean up Hugging Face cache to reduce image size
 RUN python -c "import app.utils.load_models" && \
     rm -rf /app/hfcache/hub/tmp* && \

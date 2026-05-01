@@ -13,7 +13,7 @@ from app.utils.logging_utils import get_logger
 from app.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
-MODEL = load_yolo_model()
+DETECTOR = load_yolo_model()
 
 
 def create_diagnosis_record(
@@ -97,55 +97,46 @@ def detect_task(
     db = sync_SessionLocal()
 
     try:
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        image_rgb = np.array(image)
-        image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
-
         # Upload original
         uploaded_url, uploaded_public_id = CloudinaryUtils.upload_bytes_to_cloudinary(
             image_bytes, public_id=f"detections/{detection_id}_uploaded"
         )
 
-        # YOLO inference
-        results = MODEL(image, conf=0.10, imgsz=1024)
+        # Bone Fracture Detection using the new service
+        result = DETECTOR.predict_bytes(image_bytes)
+        detections = result["detections"]
+        annotated_img = result["annotated_image"]
 
-        # Plot result
-        results_plotted = np.ascontiguousarray(
-            np.array(results[0].plot()), dtype=np.uint8
-        )
-        _, result_encoded = cv2.imencode(".jpg", results_plotted)
+        # Convert PIL annotated image to bytes for Cloudinary
+        img_byte_arr = io.BytesIO()
+        annotated_img.save(img_byte_arr, format="JPEG")
+        result_encoded = img_byte_arr.getvalue()
 
         result_url, _ = CloudinaryUtils.upload_bytes_to_cloudinary(
-            result_encoded.tobytes(),
+            result_encoded,
             public_id=f"detections/{detection_id}_result",
         )
 
-        detections = []
-        detection_boxes = []
-
-        for result in results:
-            for i, box in enumerate(result.boxes.cpu().numpy()):
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                class_id = int(box.cls[0])
-
-                detection_boxes.append([x1, y1, x2, y2])
-                detections.append(
-                    {
-                        "id": i,
-                        "class": result.names[class_id],
-                        "confidence": round(float(box.conf[0]), 2),
-                        "box": {"x1": x1, "y1": y1, "x2": x2, "y2": y2},
-                    }
-                )
+        detection_boxes = [d["bbox"] for d in detections]
 
         explanation_url = ""
         gradcam_url = ""
 
         if detection_boxes:
+            # For Grad-CAM and Explanation, we need numpy BGR
+            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            image_bgr = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
             # Explanation image
             explanation_img = image_bgr.copy()
             for x1, y1, x2, y2 in detection_boxes:
-                cv2.rectangle(explanation_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.rectangle(
+                    explanation_img,
+                    (int(x1), int(y1)),
+                    (int(x2), int(y2)),
+                    (0, 255, 0),
+                    2,
+                )
 
             _, expl_encoded = cv2.imencode(".jpg", explanation_img)
             explanation_url, _ = CloudinaryUtils.upload_bytes_to_cloudinary(
