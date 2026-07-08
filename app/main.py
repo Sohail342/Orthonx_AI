@@ -1,7 +1,10 @@
 """Main FastAPI application."""
 
+import os
+import sys
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +12,7 @@ from app.api.v1.api import api_v1_router
 from app.api.v1.endpoints.custom_auth import verify_router
 from app.core.config import settings
 from app.utils.logging_utils import get_logger
+from app.utils.ollama_utils import OLLAMA_BASE_URL, OLLAMA_MODEL
 
 CORS = [str(origin)[:-1] for origin in settings.BACKEND_CORS_ORIGINS]
 
@@ -21,11 +25,11 @@ async def lifespan(application: FastAPI):
     """Lifespan handler to initialize/warmup services."""
     logger.info("Initializing services on startup...")
 
-    import os
-
-    import httpx
-
-    from app.utils.ollama_utils import OLLAMA_BASE_URL, OLLAMA_MODEL
+    if "pytest" in sys.modules:
+        logger.info("Test environment detected. Skipping AI Model warmup.")
+        yield
+        logger.info("Shutting down services...")
+        return
 
     # Read Knowledge Base for Prompt Priming
     knowledge_path = os.path.join(
