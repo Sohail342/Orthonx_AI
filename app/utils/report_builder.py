@@ -39,7 +39,7 @@ BRAND_WARNING = colors.HexColor("#D97706")
 BRAND_DANGER = colors.HexColor("#DC2626")
 WHITE = colors.white
 
-LOGO_PATH = os.path.join(os.path.dirname(__file__), "..", "static", "orthonx_logo.png")
+LOGO_PATH = os.path.join(os.path.dirname(__file__), "..", "static", "new_logo.png")
 
 PAGE_WIDTH, PAGE_HEIGHT = A4
 CONTENT_WIDTH = PAGE_WIDTH - 4 * cm  # 2cm margins each side

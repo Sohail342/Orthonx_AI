@@ -81,6 +81,8 @@ services:
     volumes:
       - ai_knowledge:/app/app/knowledge
       - ai_chroma_data:/app/chroma_db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     labels:
       - "traefik.enable=true"
